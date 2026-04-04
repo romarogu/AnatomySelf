@@ -18,46 +18,37 @@ export default async function handler(req, res) {
     const { base64, mediaType } = req.body;
     if (!base64) return res.status(400).json({ error: '缺少文件数据' });
 
-    let txt = null;
-
-    // 1) Try DeepSeek (supports image via OpenAI vision format)
-    const DSK = process.env.DEEPSEEK_API_KEY;
-    if (DSK && mediaType && mediaType.startsWith('image/')) {
+    // Claude Vision — only option that supports image OCR via API
+    const AK = process.env.ANTHROPIC_API_KEY;
+    if (AK) {
+      const isPdf = mediaType === 'application/pdf';
+      const doc = isPdf
+        ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+        : { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
       try {
-        const r = await fetch('https://api.deepseek.com/v1/chat/completions', {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + DSK },
-          body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 4000, temperature: 0.1,
-            messages: [{ role: 'user', content: [
-              { type: 'image_url', image_url: { url: 'data:' + mediaType + ';base64,' + base64 } },
-              { type: 'text', text: PROMPT }
-            ]}]
+        const r = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': AK, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514', max_tokens: 4000,
+            system: '你是体检报告OCR解析器。直接返回纯JSON。',
+            messages: [{ role: 'user', content: [doc, { type: 'text', text: PROMPT }] }]
           })
         });
-        if (r.ok) { const d = await r.json(); txt = d.choices?.[0]?.message?.content || null; }
-      } catch (e) { console.warn('DeepSeek OCR err:', e.message); }
+        if (r.ok) {
+          const d = await r.json();
+          const txt = (d.content||[]).map(c=>c.text||'').join('');
+          const parsed = parseJson(txt);
+          return res.json(parsed || { metrics: [], raw_summary: txt.substring(0, 500) });
+        }
+      } catch (e) { console.warn('Claude OCR err:', e.message); }
     }
 
-    // 2) Fallback: Claude (supports PDF + images)
-    if (!txt) {
-      const AK = process.env.ANTHROPIC_API_KEY;
-      if (AK) {
-        const isPdf = mediaType === 'application/pdf';
-        const doc = isPdf
-          ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
-          : { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
-        try {
-          const r = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': AK, 'anthropic-version': '2023-06-01' },
-            body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000,
-              system: '你是体检报告OCR解析器。直接返回纯JSON。',
-              messages: [{ role: 'user', content: [doc, { type: 'text', text: PROMPT }] }] })
-          });
-          if (r.ok) { const d = await r.json(); txt = (d.content||[]).map(c=>c.text||'').join(''); }
-        } catch (e) { console.warn('Claude OCR err:', e.message); }
-      }
-    }
-
-    if (!txt) return res.status(500).json({ error: '需要配置 DEEPSEEK_API_KEY 或 ANTHROPIC_API_KEY' });
-    res.json(parseJson(txt) || { metrics: [], raw_summary: txt.substring(0, 500) });
+    // No Claude key — return instruction for manual input
+    return res.json({
+      metrics: [],
+      ocr_unavailable: true,
+      message: 'OCR自动识别需要配置 ANTHROPIC_API_KEY（Claude Vision）。DeepSeek 暂不支持图片识别。请在下方手动输入您的体检指标数值。'
+    });
   } catch (e) { res.status(500).json({ error: 'OCR失败: ' + e.message }); }
 }

@@ -379,12 +379,18 @@ function Dashboard({ user, setUser, onLogout }) {
     setOcrL(true); setPipe(p=>p.map((s,i)=>i===1?{...s,st:"running"}:s));
     try {
       const res = await apiOCR(f);
-      setOcr(res); setPipe(p=>p.map((s,i)=>i===1?{...s,st:"done"}:s));
-      if(res.metrics?.length) {
-        const ks=Object.keys(RR);
-        const newM=[...metrics];
-        res.metrics.filter(m=>m.value!=null).forEach(m=>{const code=ks.find(k=>k===m.code)||m.code;const idx=newM.findIndex(x=>x.key===code);if(idx>=0)newM[idx]={...newM[idx],value:m.value};else newM.push({key:code,value:m.value});});
-        setMetrics(newM); saveData(newM);
+      setOcr(res);
+      if (res.ocr_unavailable) {
+        // OCR not available — show message, keep pipeline going
+        setPipe(p=>p.map((s,i)=>i===1?{...s,st:"done"}:s));
+      } else {
+        setPipe(p=>p.map((s,i)=>i===1?{...s,st:"done"}:s));
+        if(res.metrics?.length) {
+          const ks=Object.keys(RR);
+          const newM=[...metrics];
+          res.metrics.filter(m=>m.value!=null).forEach(m=>{const code=ks.find(k=>k===m.code)||m.code;const idx=newM.findIndex(x=>x.key===code);if(idx>=0)newM[idx]={...newM[idx],value:m.value};else newM.push({key:code,value:m.value});});
+          setMetrics(newM); saveData(newM);
+        }
       }
     } catch(err) { setOcr({error:err.message}); setPipe(p=>p.map((s,i)=>i===1?{...s,st:"idle"}:s)); }
     setOcrL(false);
@@ -570,16 +576,22 @@ function Dashboard({ user, setUser, onLogout }) {
                   <div style={S.label}>步骤2 · OCR 结果</div>
                   {ocr ? (
                     <div style={{ marginTop:10 }}>
+                      {ocr.ocr_unavailable && (
+                        <div style={{ padding:"14px 16px", background:"rgba(196,162,101,0.06)", border:"1px solid rgba(196,162,101,0.15)", marginBottom:10 }}>
+                          <div style={{ fontSize:".9rem", color:"#c4a265", marginBottom:6 }}>📝 请手动输入体检数据</div>
+                          <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.7 }}>{ocr.message || "图片OCR自动识别暂未开启。请在下方「当前指标」区域直接修改您的体检数值，然后点击「启动双脑对撞分析」。"}</div>
+                        </div>
+                      )}
                       {ocr.error && <div style={{ fontSize:".85rem", color:"#d4a840", marginBottom:8 }}>⚠ {ocr.error}</div>}
                       {ocr._raw && <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.6 }}>{String(ocr._raw).substring(0,400)}</div>}
-                      {ocr.metrics?.map((m,i) => (
+                      {ocr.metrics?.length > 0 && ocr.metrics.map((m,i) => (
                         <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"8px 12px", background:"#16161c", marginBottom:4 }}>
                           <span style={{ fontSize:".9rem", color:"#e0dcd4" }}>{m.name} <span style={{ fontSize:".75rem", color:"#5e5a52" }}>{m.code}</span></span>
                           <span style={{ ...S.mono, fontSize:".9rem", color:"#f0ece4" }}>{m.value} <span style={{ fontSize:".75rem", color:"#5e5a52" }}>{m.unit}</span></span>
                         </div>
                       ))}
                     </div>
-                  ) : <div style={{ fontSize:".85rem", color:"#3a3832", textAlign:"center", padding:20, marginTop:10 }}>等待上传...</div>}
+                  ) : <div style={{ fontSize:".85rem", color:"#3a3832", textAlign:"center", padding:20, marginTop:10 }}>上传报告或直接在下方手动输入指标</div>}
                 </div>
               </div>
 
