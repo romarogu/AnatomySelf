@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         'x-api-key': KEY,
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
         system: '你是专业的体检报告OCR解析器。直接返回纯JSON，不要使用markdown代码块。',
         messages: [{

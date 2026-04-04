@@ -374,6 +374,19 @@ function Dashboard({ user, setUser, onLogout }) {
   // ── OCR ──
   const doOCR = useCallback(async (e) => {
     const f = e.target.files?.[0]; if(!f) return;
+
+    // File size check — Vercel serverless has timeout limits
+    if (f.size > 500 * 1024) {
+      setOcr({ error: '文件过大（' + (f.size/1024/1024).toFixed(1) + 'MB）。请将体检报告截图为 PNG/JPG 后上传，建议小于 500KB。' });
+      setFile(f);
+      return;
+    }
+    if (f.type === 'application/pdf') {
+      setOcr({ error: 'PDF 处理时间较长，可能超时。建议将体检报告截图为 PNG/JPG 格式后上传。' });
+      setFile(f);
+      return;
+    }
+
     setFile(f); setOcr(null); setSci(null); setDst(null);
     setPipe(p=>p.map((s,i)=>({...s,st:i===0?"done":"idle"})));
     setOcrL(true); setPipe(p=>p.map((s,i)=>i===1?{...s,st:"running"}:s));
@@ -558,11 +571,11 @@ function Dashboard({ user, setUser, onLogout }) {
                     border:"1px dashed rgba(196,162,101,.2)", padding:"36px 20px", textAlign:"center",
                     cursor:"pointer", background:file?"rgba(82,176,154,.04)":"transparent", marginTop:10, transition:"all .3s"
                   }}>
-                    <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={doOCR} style={{ display:"none" }}/>
+                    <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={doOCR} style={{ display:"none" }}/>
                     {file ? (
                       <div><div style={{ fontSize:"1rem", color:"#52b09a" }}>✓ {file.name}</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>{(file.size/1024).toFixed(1)}KB · 点击更换</div></div>
                     ) : (
-                      <div><div style={{ fontSize:"2rem", color:"#6a5a35", marginBottom:8 }}>⬆</div><div style={{ fontSize:".95rem", color:"#9a9488" }}>上传体检报告</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>支持 PDF / PNG / JPG</div></div>
+                      <div><div style={{ fontSize:"2rem", color:"#6a5a35", marginBottom:8 }}>⬆</div><div style={{ fontSize:".95rem", color:"#9a9488" }}>上传体检报告截图</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>支持 PNG / JPG（建议小于 500KB）</div></div>
                     )}
                   </div>
                   {ocrL && <div style={{ marginTop:14, display:"flex", alignItems:"center", gap:8 }}>
