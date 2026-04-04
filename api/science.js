@@ -21,19 +21,21 @@ export default async function handler(req, res) {
     const group = age < 13 ? '儿童' : age < 18 ? '青少年' : age < 60 ? '成年人' : '老年人';
     const desc = anomalies.map(a => `${a.cn}(${a.key}): ${a.value} ${a.unit}，参考 ${a.low}-${a.high}，${a.status}`).join('\n');
 
-    const resp = await fetch('https://api.gptsapi.net/v1/chat/completions', {
+    const resp = await fetch('https://api.gptsapi.net/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${KEY}`,
+        'x-api-key': KEY,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
-        messages: [
-          { role: 'system', content: '你是一位资深临床医学专家，精通人体解剖学和生理学。你的分析必须体现患者年龄和性别的人口统计学差异。直接返回纯JSON，不要markdown代码块。' },
-          { role: 'user', content: `【患者】${age}岁 ${sexCn}性（${group}）\n\n【异常指标】\n${desc}\n\n针对每个异常给出解剖学/生理学解读，必须体现人口统计学差异。\n\n返回纯JSON：\n{"items":[{"metric":"指标代码","metric_cn":"中文名","organ_system":"对应五行（木火土金水）","severity":"mild/moderate/severe","anatomical_context":"解剖学位置和功能","physiological_analysis":"病理生理学机制分析","demographic_specific":"针对${age}岁${sexCn}性的特殊说明","recommendation":"具体建议"}],"summary":"整体健康风险评估总结"}` }
-        ],
+        system: '你是一位资深临床医学专家，精通人体解剖学和生理学。你的分析必须体现患者年龄和性别的人口统计学差异。直接返回纯JSON，不要markdown代码块。',
+        messages: [{
+          role: 'user',
+          content: `【患者】${age}岁 ${sexCn}性（${group}）\n\n【异常指标】\n${desc}\n\n针对每个异常给出解剖学/生理学解读，必须体现人口统计学差异。\n\n返回纯JSON：\n{"items":[{"metric":"指标代码","metric_cn":"中文名","organ_system":"对应五行（木火土金水）","severity":"mild/moderate/severe","anatomical_context":"解剖学位置和功能","physiological_analysis":"病理生理学机制分析","demographic_specific":"针对${age}岁${sexCn}性的特殊说明","recommendation":"具体建议"}],"summary":"整体健康风险评估总结"}`
+        }],
       }),
     });
 
@@ -43,7 +45,8 @@ export default async function handler(req, res) {
     }
 
     const data = await resp.json();
-    const txt = data.choices?.[0]?.message?.content || '';
+    // Anthropic Messages format: content: [{type:"text", text:"..."}]
+    const txt = (data.content || []).map(c => c.text || '').join('');
     const parsed = parseJson(txt);
     res.json(parsed || { items: [], summary: txt.substring(0, 500) });
   } catch (e) {
