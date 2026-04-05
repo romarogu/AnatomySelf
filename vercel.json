@@ -4,16 +4,16 @@
   "framework": "vite",
   "functions": {
     "api/ocr.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/science.js": {
-      "maxDuration": 30
+      "maxDuration": 120
     },
     "api/destiny.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/health.js": {
-      "maxDuration": 5
+      "maxDuration": 10
     }
   }
 }

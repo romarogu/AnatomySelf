@@ -30,11 +30,11 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
-        system: '你是一位资深临床医学专家，精通人体解剖学和生理学。你的分析必须体现患者年龄和性别的人口统计学差异。直接返回纯JSON，不要markdown代码块。',
+        max_tokens: 2000,
+        system: '临床医学专家。返回纯JSON，不要markdown。每项分析控制在50字以内。',
         messages: [{
           role: 'user',
-          content: `【患者】${age}岁 ${sexCn}性（${group}）\n\n【异常指标】\n${desc}\n\n针对每个异常给出解剖学/生理学解读，必须体现人口统计学差异。\n\n返回纯JSON：\n{"items":[{"metric":"指标代码","metric_cn":"中文名","organ_system":"对应五行（木火土金水）","severity":"mild/moderate/severe","anatomical_context":"解剖学位置和功能","physiological_analysis":"病理生理学机制分析","demographic_specific":"针对${age}岁${sexCn}性的特殊说明","recommendation":"具体建议"}],"summary":"整体健康风险评估总结"}`
+          content: `${age}岁${sexCn}(${group})，异常指标:\n${desc}\n\n返回JSON:{"items":[{"metric":"代码","metric_cn":"中文名","organ_system":"五行","severity":"mild/moderate/severe","anatomical_context":"解剖定位","physiological_analysis":"病理分析","demographic_specific":"年龄性别特殊说明","recommendation":"建议"}],"summary":"总结"}`
         }],
       }),
     });
