@@ -564,11 +564,11 @@ function Dashboard({ user, setUser, onLogout }) {
                     border:"1px dashed rgba(196,162,101,.2)", padding:"36px 20px", textAlign:"center",
                     cursor:"pointer", background:file?"rgba(82,176,154,.04)":"transparent", marginTop:10, transition:"all .3s"
                   }}>
-                    <input ref={fileRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={doOCR} style={{ display:"none" }}/>
+                    <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={doOCR} style={{ display:"none" }}/>
                     {file ? (
                       <div><div style={{ fontSize:"1rem", color:"#52b09a" }}>✓ {file.name}</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>{(file.size/1024).toFixed(1)}KB · 点击更换</div></div>
                     ) : (
-                      <div><div style={{ fontSize:"2rem", color:"#6a5a35", marginBottom:8 }}>⬆</div><div style={{ fontSize:".95rem", color:"#9a9488" }}>上传体检报告</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>支持 PDF / PNG / JPG</div></div>
+                      <div><div style={{ fontSize:"2rem", color:"#6a5a35", marginBottom:8 }}>⬆</div><div style={{ fontSize:".95rem", color:"#9a9488" }}>上传体检报告截图</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>支持 PNG / JPG（拍照或截图）</div></div>
                     )}
                   </div>
                   {ocrL && <div style={{ marginTop:14, display:"flex", alignItems:"center", gap:8 }}>

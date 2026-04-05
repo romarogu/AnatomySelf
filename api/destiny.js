@@ -90,13 +90,18 @@ export default async function handler(req, res) {
       pillarDesc = `年柱: ${baziPillars.year || '未知'}\n月柱: ${baziPillars.month || '未知'}\n日柱: ${baziPillars.day || '未知'}（日主）\n时柱: ${baziPillars.hour || '未知'}\n`;
     }
 
-    const prompt = `【用户八字命盘】
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
+    const prompt = `【当前日期】${currentYear}年${currentMonth}月
+
+【用户八字命盘】
 ${pillarDesc}完整八字: ${baziStr}
 日主: ${dayMaster}（${dayMasterElement}）
 
 【当前时运】
 大运: ${dayun.lbl}（${dayun.el}）
-流年: ${liunian.lbl}（${liunian.el}）
+流年（${currentYear}年）: ${liunian.lbl}（${liunian.el}）
 
 【原局五行力量分布（含大运流年修正）】
 木: ${wuxing['木']}% | 火: ${wuxing['火']}% | 土: ${wuxing['土']}% | 金: ${wuxing['金']}% | 水: ${wuxing['水']}%
@@ -106,12 +111,14 @@ ${findings || '无明显异常'}
 
 请严格按照系统提示中的十大分析框架，逐一进行完整分析，并与健康异常进行对撞。
 
+重要：所有时间预测必须基于当前${currentYear}年${currentMonth}月，预测${currentYear}年剩余月份和${currentYear + 1}年的趋势。不要出现过去年份的预测。
+
 返回纯JSON格式：
 {
   "bazi_analysis": {
-    "pillars_detail": "四柱逐柱拆解（天干地支、五行、阴阳）",
+    "pillars_detail": "四柱逐柱拆解",
     "tiangang_relations": "天干生克反应（含天干五合）",
-    "dizhi_relations": "地支刑冲破害合会反应（逐一列出）",
+    "dizhi_relations": "地支刑冲破害合会反应",
     "pattern": "格局判定（格局名称、用神、忌神）",
     "tiaohou": "调候用神分析",
     "tongguan": "通关用神分析",
@@ -125,12 +132,16 @@ ${findings || '无明显异常'}
       "organ_wuxing": "对应五行",
       "current_forces": "当前大运流年对该脏腑的五行作用力分析",
       "evolution_path": "未来演化趋势预判",
-      "risk_window": "高风险时间窗口",
+      "risk_window": "高风险时间窗口（必须是${currentYear}年或${currentYear + 1}年）",
       "prevention": "基于命理的预防性养生建议"
     }
   ],
-  "temporal_outlook": "未来6-12个月整体运势与健康走向",
-  "key_dates": ["需要特别注意的月份或时间节点及原因"]
+  "life_tuning": {
+    "medical_advice": ["左脑（医学）建议1", "左脑（医学）建议2", "左脑（医学）建议3"],
+    "destiny_advice": ["右脑（命理）建议1：包含具体的五行调节方法（颜色、方位、食物、时间等）", "右脑（命理）建议2", "右脑（命理）建议3"]
+  },
+  "temporal_outlook": "从${currentYear}年${currentMonth}月起未来12个月整体运势与健康走向",
+  "key_dates": ["${currentYear}年X月：原因", "${currentYear + 1}年X月：原因"]
 }`;
 
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
