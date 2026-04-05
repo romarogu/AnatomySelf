@@ -609,7 +609,20 @@ export default function App() {
 // DASHBOARD (post-login)
 // ════════════════════════════════════════
 function Dashboard({ user, setUser, onLogout }) {
-  const [metrics, setMetrics] = useState(user.metrics || INIT_M);
+  // Ensure all 15 standard slots exist, merging any saved data
+  const initMetrics = useMemo(() => {
+    const saved = user.metrics || [];
+    // Start from 15 standard slots
+    return INIT_M.map(slot => {
+      const existing = saved.find(m => m.key === slot.key);
+      // Also check old key aliases (BP→SBP, TC→TG)
+      const aliased = !existing && slot.key === "SBP" ? saved.find(m => m.key === "BP") :
+                      !existing && slot.key === "TG" ? saved.find(m => m.key === "TC") : null;
+      return existing ? { ...slot, value: existing.value } :
+             aliased ? { ...slot, value: aliased.value } : slot;
+    });
+  }, []);
+  const [metrics, setMetrics] = useState(initMetrics);
   const [file, setFile] = useState(null);
   const [ocr, setOcr] = useState(null);
   const [ocrL, setOcrL] = useState(false);
@@ -657,7 +670,11 @@ function Dashboard({ user, setUser, onLogout }) {
 
   const updateMetric = useCallback((key, value) => {
     const parsed = (value === null || value === "" || value === undefined) ? null : parseFloat(value);
-    const newM = metrics.map(m => m.key===key ? {...m, value: (parsed !== null && isNaN(parsed)) ? null : parsed} : m);
+    const finalVal = (parsed !== null && isNaN(parsed)) ? null : parsed;
+    const exists = metrics.some(m => m.key === key);
+    const newM = exists
+      ? metrics.map(m => m.key === key ? { ...m, value: finalVal } : m)
+      : [...metrics, { key, value: finalVal }];
     setMetrics(newM);
     saveData(newM);
   }, [metrics, saveData]);
