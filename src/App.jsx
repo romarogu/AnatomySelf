@@ -45,6 +45,36 @@ function calcDY(bz, age, sex) {
 
 function calcLN(yr) { const s=SC[md(yr-4,10)],b=BC[md(yr-4,12)]; return {el:TG[s][0],lbl:s+b}; }
 
+// 月令五行力量 — 每个月的五行旺衰
+// 寅卯月木旺、巳午月火旺、辰戌丑未月土旺、申酉月金旺、亥子月水旺
+const MONTH_WX = {
+  1:{主:"土",旺:"水",衰:"火"},  // 丑月
+  2:{主:"木",旺:"木",衰:"金"},  // 寅月
+  3:{主:"木",旺:"木",衰:"金"},  // 卯月
+  4:{主:"土",旺:"木",衰:"水"},  // 辰月
+  5:{主:"火",旺:"火",衰:"水"},  // 巳月
+  6:{主:"火",旺:"火",衰:"水"},  // 午月 — 火最旺
+  7:{主:"土",旺:"火",衰:"木"},  // 未月
+  8:{主:"金",旺:"金",衰:"木"},  // 申月
+  9:{主:"金",旺:"金",衰:"木"},  // 酉月
+  10:{主:"土",旺:"金",衰:"水"}, // 戌月
+  11:{主:"水",旺:"水",衰:"火"}, // 亥月
+  12:{主:"水",旺:"水",衰:"火"}, // 子月 — 水最旺
+};
+
+function applyMonthEffect(baseWX, month) {
+  const mw = MONTH_WX[month]; if(!mw) return baseWX;
+  const m = {...baseWX};
+  // 当月主气五行加强，被克五行减弱
+  m[mw.主]=(m[mw.主]||0)+1.5;
+  m[mw.旺]=(m[mw.旺]||0)+0.8;
+  m[mw.衰]=Math.max(0.1,(m[mw.衰]||0)-1);
+  // 重新归一化
+  const t = Object.values(m).reduce((a,b)=>a+b,0);
+  if(t>0) Object.keys(m).forEach(k => m[k]=Math.round(m[k]/t*1000)/10);
+  return m;
+}
+
 function applyTemp(base, dy, ln) {
   const m = {...base};
   m[dy.el]=(m[dy.el]||0)+2; m[CTL[dy.el]]=Math.max(.1,(m[CTL[dy.el]]||0)-1.5); m[GEN[dy.el]]=(m[GEN[dy.el]]||0)+.8;
@@ -661,7 +691,21 @@ function Dashboard({ user, setUser, onLogout }) {
   const bazi = useMemo(()=>calcBazi(by,bm,bd,bh), [by,bm,bd,bh]);
   const dy = useMemo(()=>calcDY(bazi,age,sex), [bazi,age,sex]);
   const ln = useMemo(()=>calcLN(new Date().getFullYear()), []);
-  const destWX = useMemo(()=>applyTemp(calcWX(bazi),dy,ln), [bazi,dy,ln]);
+  // 时空快进：根据 timeOffset 计算目标月份的五行力量
+  const targetMonth = useMemo(() => {
+    const now = new Date();
+    const m = now.getMonth() + 1 + timeOffset; // 1-based
+    return ((m - 1) % 12 + 12) % 12 + 1; // wrap 1-12
+  }, [timeOffset]);
+  const targetYear = useMemo(() => {
+    const now = new Date();
+    return now.getFullYear() + Math.floor((now.getMonth() + timeOffset) / 12);
+  }, [timeOffset]);
+  const targetLN = useMemo(() => calcLN(targetYear), [targetYear]);
+  const destWX = useMemo(() => {
+    const base = applyTemp(calcWX(bazi), dy, targetLN);
+    return timeOffset === 0 ? base : applyMonthEffect(base, targetMonth);
+  }, [bazi, dy, targetLN, timeOffset, targetMonth]);
   const medWX = useMemo(()=>{const r={};["木","火","土","金","水"].forEach(e=>r[e]=oScore(metrics,e,age,sex));return r;}, [metrics,age,sex]);
   const colls = useMemo(()=>calcColls(medWX,destWX), [medWX,destWX]);
   const anoms = useMemo(()=>metrics.filter(m=>{if(m.value==null)return false;const r=gR(m.key,age,sex);return r&&(m.value<r.l||m.value>r.h);}).map(m=>({...m,ref:gR(m.key,age,sex),st:m.value>(gR(m.key,age,sex)?.h||999)?"偏高":"偏低"})), [metrics,age,sex]);
@@ -826,6 +870,167 @@ function Dashboard({ user, setUser, onLogout }) {
     }
     setChatLoading(false);
   }, [chatInput, chatBrain, chatLoading, chatHistory, age, sex, bazi, dy, ln, sci, dst]);
+
+  // ── 科学脑报告：生命说明书 ──
+  const generateScienceReport = useCallback(() => {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+    const filledM = metrics.filter(m => m.value != null);
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AnatomySelf · 生命说明书</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08080a;color:#e0dcd4;font-family:'Noto Serif SC',serif;padding:40px;min-height:100vh}
+.container{max-width:680px;margin:0 auto}
+.header{text-align:center;padding:40px 0 30px;border-bottom:1px solid rgba(196,162,101,.12)}
+.header h1{font-size:1.8rem;font-weight:300;letter-spacing:.2em;color:#c4a265}
+.header .sub{font-size:.85rem;color:#5e5a52;margin-top:8px;letter-spacing:.15em}
+.header .date{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#3a3832;margin-top:12px}
+.section{margin:28px 0;padding:20px 0;border-bottom:1px solid rgba(196,162,101,.06)}
+.section-title{font-size:.72rem;font-family:'JetBrains Mono',monospace;color:#6a5a35;letter-spacing:.2em;margin-bottom:14px}
+.wx-group{display:flex;gap:6px;margin-bottom:12px;align-items:center}
+.wx-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.wx-label{font-size:.9rem;width:80px}
+.metric-row{display:flex;justify-content:space-between;padding:6px 12px;margin:3px 0;background:#16161c}
+.metric-name{font-size:.88rem}
+.metric-val{font-family:'JetBrains Mono',monospace;font-size:.88rem}
+.normal{color:#52b09a}.abnormal{color:#c44040}
+.summary-box{padding:16px 20px;background:rgba(82,176,154,.04);border:1px solid rgba(82,176,154,.1);margin:16px 0;line-height:1.8;font-size:.88rem;color:#9a9488}
+.item-card{padding:14px 16px;background:#16161c;margin:8px 0;border-left:3px solid #52b09a}
+.item-title{font-size:.95rem;color:#e0dcd4;margin-bottom:6px}
+.item-body{font-size:.85rem;color:#9a9488;line-height:1.8}
+.item-rec{font-size:.82rem;color:#52b09a;margin-top:6px}
+.footer{text-align:center;padding:30px 0;font-size:.7rem;color:#3a3832;border-top:1px solid rgba(196,162,101,.06);margin-top:30px}
+.disclaimer{font-size:.7rem;color:#4a4a44;line-height:1.7;padding:12px 16px;background:rgba(196,162,101,.02);border:1px solid rgba(196,162,101,.06);margin-top:20px}
+@media print{body{padding:20px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body><div class="container">
+<div class="header">
+<div style="font-size:.75rem;color:#3a3832;letter-spacing:.3em">ANATOMYSELF</div>
+<h1>生 命 说 明 书</h1>
+<div class="sub">${user.username} · ${age}岁${sex==="M"?"男":"女"}性 · 日主${bazi.dm}(${bazi.dme})</div>
+<div class="date">${dateStr} · 大运${dy.lbl} · 流年${targetLN.lbl}</div>
+</div>
+
+<div class="section">
+<div class="section-title">VITAL SIGNS · 生命体征概览</div>
+${WX_GROUPS.map(g => {
+  const items = g.keys.map(k => {
+    const m = metrics.find(x=>x.key===k);
+    const ref = gR(k,age,sex);
+    if(!ref) return '';
+    const hasVal = m?.value != null;
+    const inR = hasVal && m.value>=ref.l && m.value<=ref.h;
+    return `<div class="metric-row"><span class="metric-name">${ref.cn} <span style="font-size:.65rem;color:#5e5a52">${k}</span></span><span class="metric-val ${hasVal?(inR?'normal':'abnormal'):''}">${hasVal?m.value:'—'} <span style="font-size:.68rem;color:#3a3832">${ref.u}</span></span></div>`;
+  }).join('');
+  return `<div style="margin-bottom:16px"><div class="wx-group"><div class="wx-dot" style="background:${EC[g.el]}"></div><div class="wx-label" style="color:${EC[g.el]}">${g.el} · ${g.label}</div></div>${items}</div>`;
+}).join('')}
+</div>
+
+${sci?.items?.length ? `<div class="section">
+<div class="section-title">ANALYSIS · 科学脑深度解读</div>
+${sci.items.map(it => `<div class="item-card" style="border-color:${EC[it.organ_system]||'#52b09a'}">
+<div class="item-title">${it.metric_cn} <span style="font-size:.75rem;color:${EC[it.organ_system]}">${it.organ_system}</span></div>
+<div class="item-body">${it.physiological_analysis}</div>
+${it.recommendation ? `<div class="item-rec">💡 ${it.recommendation}</div>` : ''}
+</div>`).join('')}
+</div>` : ''}
+
+${sci?.summary ? `<div class="summary-box">📋 ${sci.summary}</div>` : ''}
+
+<div class="disclaimer">⚕ 本报告由 AI 模型基于体检数据生成，仅供健康参考，不构成医疗诊断或治疗建议。如有健康问题，请咨询专业医疗机构。</div>
+
+<div class="footer">
+ANATOMYSELF · 个人生命实验室<br>
+Where anatomical precision meets celestial cartography
+</div>
+</div></body></html>`;
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `AnatomySelf_生命说明书_${dateStr}.html`; a.click();
+    URL.revokeObjectURL(url);
+  }, [metrics, sci, age, sex, user, bazi, dy, targetLN]);
+
+  // ── 命理脑报告：一周能量防御指南 ──
+  const generateDestinyGuide = useCallback(() => {
+    const now = new Date();
+    const weekDays = ["日","一","二","三","四","五","六"];
+    // 生成未来7天的五行能量分布
+    const days = Array.from({length:7}, (_, i) => {
+      const d = new Date(now.getTime() + i * 864e5);
+      const ds = SC[md(Math.round((d - new Date(2000,0,7))/864e5), 10)];
+      const db = BC[md(Math.round((d - new Date(2000,0,7))/864e5), 12)];
+      const dayEl = TG[ds][0];
+      // 日干与日主的关系
+      const rel = dayEl === bazi.dme ? "比肩" :
+                  GEN[bazi.dme] === dayEl ? "食伤" :
+                  CTL[bazi.dme] === dayEl ? "财星" :
+                  GEN[dayEl] === bazi.dme ? "印星" : "官杀";
+      const energy = dayEl === bazi.dme ? 90 :
+                     GEN[dayEl] === bazi.dme ? 80 :
+                     GEN[bazi.dme] === dayEl ? 60 :
+                     CTL[dayEl] === bazi.dme ? 30 : 45;
+      return {
+        date: `${d.getMonth()+1}/${d.getDate()}`,
+        weekday: weekDays[d.getDay()],
+        gan: ds, zhi: db, el: dayEl, rel, energy,
+        advice: energy >= 80 ? "宜进取" : energy >= 60 ? "宜平稳" : "宜守护",
+        organ: EO[dayEl],
+      };
+    });
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AnatomySelf · 一周能量防御指南</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08080a;color:#e0dcd4;font-family:'Noto Serif SC',serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{width:400px;padding:36px 32px;background:linear-gradient(160deg,#0f1014,#16161c,#0f1014);border:1px solid rgba(196,162,101,.12);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#4a8a4a,#c45a30,#a08a50,#9898a8,#3a6a9a)}
+.title{text-align:center;margin-bottom:24px}
+.title h2{font-size:1.1rem;font-weight:300;color:#c4a265;letter-spacing:.25em}
+.title .sub{font-size:.72rem;color:#5e5a52;margin-top:6px;font-family:'JetBrains Mono',monospace}
+.day{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(196,162,101,.05)}
+.day:last-child{border:none}
+.day-date{width:48px;text-align:center}
+.day-date .d{font-size:.88rem;color:#9a9488}
+.day-date .w{font-size:.65rem;color:#5e5a52;font-family:'JetBrains Mono',monospace}
+.day-el{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600}
+.day-info{flex:1}
+.day-info .gz{font-size:.82rem;color:#e0dcd4}
+.day-info .rel{font-size:.7rem;color:#5e5a52;margin-top:2px}
+.day-bar{width:80px}
+.day-bar .bar{height:3px;background:#08080a;border-radius:2px}
+.day-bar .fill{height:100%;border-radius:2px;transition:width .4s}
+.day-advice{font-size:.72rem;width:50px;text-align:right}
+.footer{text-align:center;margin-top:20px;font-size:.6rem;color:#3a3832;letter-spacing:.1em}
+.dm{text-align:center;margin-bottom:16px;padding:8px 12px;background:rgba(196,162,101,.03);border:1px solid rgba(196,162,101,.06)}
+.dm span{font-size:.82rem;color:#c4a265}
+.disclaimer{font-size:.58rem;color:#3a3832;text-align:center;margin-top:14px;line-height:1.5}
+</style></head><body><div class="card">
+<div class="title">
+<div style="font-size:.6rem;color:#3a3832;letter-spacing:.3em;margin-bottom:4px">ANATOMYSELF</div>
+<h2>一周能量防御指南</h2>
+<div class="sub">${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} – ${new Date(now.getTime()+6*864e5).getMonth()+1}/${new Date(now.getTime()+6*864e5).getDate()}</div>
+</div>
+<div class="dm">日主 <span>${bazi.dm}(${bazi.dme})</span> · 大运 <span>${dy.lbl}</span> · ${targetLN.lbl}年</div>
+${days.map(d => `<div class="day">
+<div class="day-date"><div class="d">${d.date}</div><div class="w">周${d.weekday}</div></div>
+<div class="day-el" style="background:${EC[d.el]}22;color:${EC[d.el]}">${d.el}</div>
+<div class="day-info"><div class="gz">${d.gan}${d.zhi} <span style="font-size:.7rem;color:${EC[d.el]}">${d.organ}</span></div><div class="rel">${d.rel}</div></div>
+<div class="day-bar"><div class="bar"><div class="fill" style="width:${d.energy}%;background:${d.energy>=80?'#52b09a':d.energy>=60?'#d4a840':'#c44040'}"></div></div></div>
+<div class="day-advice" style="color:${d.energy>=80?'#52b09a':d.energy>=60?'#d4a840':'#c44040'}">${d.advice}</div>
+</div>`).join('')}
+<div class="disclaimer">☯ 基于传统八字命理推演，属文化参考，不构成医疗建议</div>
+<div class="footer">ANATOMYSELF · 个人生命实验室</div>
+</div></body></html>`;
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `AnatomySelf_能量防御指南_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.html`; a.click();
+    URL.revokeObjectURL(url);
+  }, [bazi, dy, targetLN]);
 
   const tabs = [
     { id: "upload", lb: "📄 数据中心" },
@@ -1049,7 +1254,10 @@ function Dashboard({ user, setUser, onLogout }) {
                 <div style={S.card}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                     <div style={S.label}>对撞共振雷达</div>
-                    <div style={{ ...S.mono, fontSize:".65rem", color:"#3a3832" }}>time_offset: {timeOffset}</div>
+                    <div style={{ ...S.mono, fontSize:".72rem", color: timeOffset===0 ? "#5e5a52" : "#c4a265" }}>
+                      {targetYear}年{targetMonth}月
+                      {timeOffset !== 0 && <span style={{ color:"#5e5a52" }}> (+{timeOffset}月)</span>}
+                    </div>
                   </div>
                   <InteractiveRadar
                     med={medWX} dest={destWX} colls={colls}
@@ -1060,8 +1268,53 @@ function Dashboard({ user, setUser, onLogout }) {
                   <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:10, fontSize:".78rem" }}>
                     <span style={{ color:"#c4a265" }}>● 命理层</span>
                     <span style={{ color:"#e0dcd4" }}>◌ 医学层</span>
-                    <span style={{ color:"#c44040" }}>◎ 预警</span>
+                    <span style={{ color:"#c44040" }}>◎ 关注</span>
                   </div>
+
+                  {/* 时空快进滑动条 */}
+                  <div style={{ marginTop:14, padding:"10px 0 4px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                      <span style={{ fontSize:".75rem", color:"#6a5a35" }}>☯ 时空推演</span>
+                      {timeOffset !== 0 && (
+                        <button onClick={() => setTimeOffset(0)} style={{
+                          background:"transparent", border:"1px solid rgba(196,162,101,.15)",
+                          color:"#5e5a52", fontSize:".68rem", padding:"2px 8px", cursor:"pointer",
+                          fontFamily:"'JetBrains Mono',monospace",
+                        }}>回到当月</button>
+                      )}
+                    </div>
+                    <input type="range" min="0" max="11" value={timeOffset}
+                      onChange={e => setTimeOffset(parseInt(e.target.value))}
+                      style={{ width:"100%", accentColor:"#c4a265", height:4 }}
+                    />
+                    {/* 12个月刻度标签 */}
+                    <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
+                      {Array.from({length:12}, (_, i) => {
+                        const m = ((new Date().getMonth() + i) % 12) + 1;
+                        const mwx = MONTH_WX[m];
+                        return (
+                          <div key={i} onClick={() => setTimeOffset(i)} style={{
+                            fontSize:".58rem", cursor:"pointer", textAlign:"center", width:20,
+                            color: i === timeOffset ? "#e0dcd4" : EC[mwx.主],
+                            fontWeight: i === timeOffset ? 700 : 400,
+                            fontFamily:"'JetBrains Mono',monospace",
+                          }}>
+                            {m}月
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 当月五行旺衰速览 */}
+                  {timeOffset > 0 && (
+                    <div style={{ marginTop:8, padding:"8px 10px", background:"rgba(196,162,101,.03)", border:"1px solid rgba(196,162,101,.06)", fontSize:".78rem" }}>
+                      <span style={{ color:"#6a5a35" }}>{targetYear}年{targetMonth}月</span>
+                      <span style={{ color:EC[MONTH_WX[targetMonth].主], marginLeft:8 }}>主气 {MONTH_WX[targetMonth].主}</span>
+                      <span style={{ color:EC[MONTH_WX[targetMonth].旺], marginLeft:6 }}>旺 {MONTH_WX[targetMonth].旺}</span>
+                      <span style={{ color:"#c44040", marginLeft:6 }}>衰 {MONTH_WX[targetMonth].衰}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Dimension quick-select list */}
@@ -1323,6 +1576,39 @@ function Dashboard({ user, setUser, onLogout }) {
                   </>
                 )}
               </div>
+
+              {/* 报告生成按钮 + 免责声明 */}
+              {(sci || dst) && (
+                <div style={{ gridColumn:"1 / -1", display:"flex", flexDirection:"column", gap:10 }}>
+                  {/* 报告按钮 */}
+                  <div style={{ display:"flex", gap:10 }}>
+                    {sci && (
+                      <button onClick={() => generateScienceReport()} style={{
+                        ...S.btn, flex:1, fontSize:".85rem", padding:"10px 16px",
+                        background:"linear-gradient(135deg, #2a4a3a, #52b09a)",
+                      }}>
+                        📋 生成生命说明书 · 科学脑报告
+                      </button>
+                    )}
+                    {dst && (
+                      <button onClick={() => generateDestinyGuide()} style={{
+                        ...S.btn, flex:1, fontSize:".85rem", padding:"10px 16px",
+                        background:"linear-gradient(135deg, #3a2a1a, #c4a265)",
+                      }}>
+                        ☯ 生成一周能量防御指南
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 免责声明 */}
+                  <div style={{ padding:"12px 16px", background:"rgba(196,162,101,.02)", border:"1px solid rgba(196,162,101,.06)", fontSize:".72rem", color:"#4a4a44", lineHeight:1.7 }}>
+                    <div style={{ ...S.mono, fontSize:".65rem", color:"#3a3832", marginBottom:4, letterSpacing:".1em" }}>DISCLAIMER</div>
+                    <span style={{ color:"#52b09a" }}>科学脑</span>：基于 AI 模型对体检数据的解读，仅供参考，不构成医疗诊断或治疗建议。如有健康问题，请咨询专业医疗机构。
+                    <br/>
+                    <span style={{ color:"#c4a265" }}>命理脑</span>：基于传统八字命理学的推演分析，属于文化参考与个人兴趣探索，不具有科学实证效力，不应作为医疗决策依据。
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
