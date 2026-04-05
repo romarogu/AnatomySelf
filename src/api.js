@@ -76,3 +76,16 @@ export async function apiSaveUser(userId, appData) {
   localStorage.setItem(ck, JSON.stringify(d));
   return { success: true };
 }
+
+export async function apiChat({ brain, question, context }) {
+  const resp = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ brain, question, context }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
+    throw new Error(err.error || '对话请求失败');
+  }
+  return resp.json();
+}

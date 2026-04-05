@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiSaveUser } from "./api.js";
+import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiSaveUser, apiChat } from "./api.js";
 
 // ════════════════════════════════════════
 // BAZI ENGINE
@@ -338,6 +338,11 @@ function Dashboard({ user, setUser, onLogout }) {
   const [tab, setTab] = useState("upload");
   const [pipe, setPipe] = useState([{lb:"上传",st:"idle"},{lb:"OCR",st:"idle"},{lb:"科学脑",st:"idle"},{lb:"命理脑",st:"idle"}]);
   const fileRef = useRef(null);
+  // Chat state
+  const [chatBrain, setChatBrain] = useState("science"); // "science" or "destiny"
+  const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
 
   const by=user.birthYear, bm=user.birthMonth, bd=user.birthDay, bh=user.birthHour, sex=user.sex;
 
@@ -457,7 +462,39 @@ function Dashboard({ user, setUser, onLogout }) {
     }
   }, [sci, dst, dstL, doDst]);
 
-  const tabs = [{id:"upload",lb:"📄 数据中心"},{id:"radar",lb:"⚡ 对撞雷达"},{id:"insights",lb:"🧠 双脑洞察"},{id:"metrics",lb:"📊 体检指标"}];
+  // ── CHAT FUNCTION ──
+  const sendChat = useCallback(async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const q = chatInput.trim();
+    setChatInput("");
+    setChatHistory(prev => [...prev, { role: "user", text: q, brain: chatBrain }]);
+    setChatLoading(true);
+    try {
+      // Build context for the AI
+      let ctx = `用户: ${age}岁${sex === "M" ? "男" : "女"}性, 日主${bazi.dm}(${bazi.dme}), 大运${dy.lbl}, 流年${ln.lbl}\n`;
+      if (sci?.summary) ctx += `科学大脑总结: ${sci.summary}\n`;
+      if (dst?.temporal_outlook) ctx += `命理大脑总结: ${dst.temporal_outlook}\n`;
+      if (sci?.items?.length) ctx += `异常指标: ${sci.items.map(i => i.metric_cn).join("、")}\n`;
+      // Add last few chat messages for continuity
+      const recent = chatHistory.slice(-4).map(m => `${m.role === "user" ? "用户" : (m.brain === "science" ? "科学脑" : "命理脑")}: ${m.text}`).join("\n");
+      if (recent) ctx += `\n对话历史:\n${recent}`;
+
+      const res = await apiChat({ brain: chatBrain, question: q, context: ctx });
+      setChatHistory(prev => [...prev, { role: "assistant", text: res.answer || "无回答", brain: chatBrain }]);
+    } catch (err) {
+      setChatHistory(prev => [...prev, { role: "assistant", text: "对话失败: " + err.message, brain: chatBrain }]);
+    }
+    setChatLoading(false);
+  }, [chatInput, chatBrain, chatLoading, chatHistory, age, sex, bazi, dy, ln, sci, dst]);
+
+  const tabs = [
+    { id: "upload", lb: "📄 数据中心" },
+    { id: "radar", lb: "⚡ 对撞雷达" },
+    { id: "insights", lb: "🧠 双脑洞察" },
+    { id: "tuning", lb: "🎯 生命微调" },
+    { id: "chat", lb: "💬 深度对话" },
+    { id: "metrics", lb: "📊 体检指标" },
+  ];
 
   return (
     <div style={{ minHeight:"100vh", background:"#08080a", color:"#e0dcd4", fontFamily:"'Noto Serif SC',serif", fontSize:"14px",
@@ -758,6 +795,137 @@ function Dashboard({ user, setUser, onLogout }) {
                   <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.7 }}>{dst.temporal_outlook}</div>
                 </div>}
                 {dst?.key_dates?.length>0 && <div style={{ marginTop:8 }}>{dst.key_dates.map((d,i)=><div key={i} style={{ fontSize:".85rem", color:"#d4a840", marginBottom:3 }}>📅 {d}</div>)}</div>}
+              </div>
+            </div>
+          )}
+
+          {/* ══ LIFE TUNING ══ */}
+          {tab==="tuning" && (
+            <div>
+              {dst?.life_tuning ? (
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                  {/* Medical advice — left brain */}
+                  <div style={{ ...S.card, borderLeft:"3px solid #52b09a" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <div style={{ width:10, height:10, borderRadius:"50%", background:"#52b09a" }}/>
+                      <div>
+                        <div style={{ ...S.mono, fontSize:".85rem", color:"#52b09a" }}>左脑 · 医学建议</div>
+                        <div style={{ fontSize:".75rem", color:"#3a3832", fontStyle:"italic" }}>Science-Based Recommendations</div>
+                      </div>
+                    </div>
+                    {(dst.life_tuning.medical_advice || []).map((a, i) => (
+                      <div key={i} style={{ padding:"12px 14px", background:"#16161c", borderLeft:"2px solid #52b09a44", marginBottom:8, fontSize:".9rem", color:"#9a9488", lineHeight:1.8 }}>
+                        <span style={{ color:"#52b09a", marginRight:8 }}>💊 {i + 1}.</span>{a}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Destiny advice — right brain */}
+                  <div style={{ ...S.card, borderLeft:"3px solid #c4a265" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <div style={{ width:10, height:10, borderRadius:"50%", background:"#c4a265" }}/>
+                      <div>
+                        <div style={{ ...S.mono, fontSize:".85rem", color:"#c4a265" }}>右脑 · 命理建议</div>
+                        <div style={{ fontSize:".75rem", color:"#3a3832", fontStyle:"italic" }}>Destiny-Based Life Tuning</div>
+                      </div>
+                    </div>
+                    {(dst.life_tuning.destiny_advice || []).map((a, i) => (
+                      <div key={i} style={{ padding:"12px 14px", background:"#16161c", borderLeft:"2px solid #c4a26544", marginBottom:8, fontSize:".9rem", color:"#9a9488", lineHeight:1.8 }}>
+                        <span style={{ color:"#c4a265", marginRight:8 }}>🛡 {i + 1}.</span>{a}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign:"center", padding:48, fontSize:".95rem", color:"#3a3832" }}>
+                  请先在「数据中心」启动双脑对撞分析，生成个性化生命微调建议。
+                </div>
+              )}
+
+              {/* Key dates */}
+              {dst?.key_dates?.length > 0 && (
+                <div style={{ ...S.card, marginTop:16 }}>
+                  <div style={S.label}>关键时间节点</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:8 }}>
+                    {dst.key_dates.map((d, i) => (
+                      <div key={i} style={{ padding:"10px 14px", background:"#16161c", borderLeft:"2px solid #d4a840", fontSize:".9rem", color:"#d4a840", lineHeight:1.7 }}>
+                        📅 {d}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ CHAT ══ */}
+          {tab==="chat" && (
+            <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 180px)" }}>
+              {/* Brain selector */}
+              <div style={{ display:"flex", gap:0, marginBottom:12 }}>
+                {[["science","🔬 科学脑","#52b09a"],["destiny","🌟 命理脑","#c4a265"]].map(([id, lb, c]) => (
+                  <button key={id} onClick={() => setChatBrain(id)} style={{
+                    padding:"10px 24px", background:chatBrain===id ? c+"15" : "transparent",
+                    border: `1px solid ${chatBrain===id ? c+"44" : "rgba(196,162,101,.08)"}`,
+                    color: chatBrain===id ? c : "#5e5a52", fontSize:".9rem", cursor:"pointer",
+                    fontFamily:"'Noto Serif SC',serif",
+                  }}>{lb}</button>
+                ))}
+                <div style={{ flex:1 }}/>
+                <button onClick={() => setChatHistory([])} style={{
+                  padding:"8px 16px", background:"transparent", border:"1px solid rgba(196,162,101,.08)",
+                  color:"#5e5a52", fontSize:".8rem", cursor:"pointer",
+                }}>清空对话</button>
+              </div>
+
+              {/* Chat history */}
+              <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column", gap:8, padding:"8px 0" }}>
+                {chatHistory.length === 0 && (
+                  <div style={{ textAlign:"center", padding:48, color:"#3a3832" }}>
+                    <div style={{ fontSize:"1.2rem", marginBottom:8 }}>选择一个大脑，开始深度对话</div>
+                    <div style={{ fontSize:".85rem" }}>
+                      🔬 科学脑：追问解剖学、生理学、用药、检查建议<br/>
+                      🌟 命理脑：追问五行调节、流年趋势、养生时机
+                    </div>
+                  </div>
+                )}
+                {chatHistory.map((m, i) => (
+                  <div key={i} style={{
+                    padding:"12px 16px",
+                    background: m.role === "user" ? "rgba(196,162,101,.06)" : m.brain === "science" ? "rgba(82,176,154,.06)" : "rgba(196,162,101,.04)",
+                    borderLeft: m.role === "user" ? "3px solid #c4a265" : `3px solid ${m.brain === "science" ? "#52b09a" : "#c4a265"}`,
+                    alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                    maxWidth: "85%",
+                  }}>
+                    <div style={{ fontSize:".72rem", color: m.role === "user" ? "#c4a265" : m.brain === "science" ? "#52b09a" : "#c4a265", marginBottom:4, ...S.mono }}>
+                      {m.role === "user" ? "你" : m.brain === "science" ? "🔬 科学脑" : "🌟 命理脑"}
+                    </div>
+                    <div style={{ fontSize:".9rem", color:"#e0dcd4", lineHeight:1.8, whiteSpace:"pre-wrap" }}>{m.text}</div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div style={{ padding:"12px 16px", background:chatBrain === "science" ? "rgba(82,176,154,.06)" : "rgba(196,162,101,.04)", borderLeft:`3px solid ${chatBrain === "science" ? "#52b09a" : "#c4a265"}` }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <div style={{ width:10, height:10, border:`2px solid ${chatBrain === "science" ? "#52b09a" : "#c4a265"}`, borderTopColor:"transparent", borderRadius:"50%", animation:"spin .8s linear infinite" }}/>
+                      <span style={{ fontSize:".85rem", color:"#5e5a52" }}>{chatBrain === "science" ? "科学脑" : "命理脑"}思考中...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input */}
+              <div style={{ display:"flex", gap:8, padding:"12px 0 0", borderTop:"1px solid rgba(196,162,101,.08)" }}>
+                <input
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
+                  placeholder={chatBrain === "science" ? "向科学脑提问（如：ALT偏高需要做什么进一步检查？）" : "向命理脑提问（如：今年下半年健康运势如何？）"}
+                  style={{ flex:1, ...S.input, fontSize:".9rem" }}
+                />
+                <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} style={{
+                  ...S.btn, padding:"10px 24px", opacity: chatLoading || !chatInput.trim() ? 0.5 : 1,
+                  cursor: chatLoading ? "wait" : "pointer",
+                }}>发送</button>
               </div>
             </div>
           )}
