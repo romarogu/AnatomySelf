@@ -55,17 +55,87 @@ function applyTemp(base, dy, ln) {
 }
 
 // ════════════════════════════════════════
-// MEDICAL REFERENCES
+// MEDICAL REFERENCES — 五行标准化体系 (15 核心指标)
 // ════════════════════════════════════════
+// 五行分组顺序
+const WX_GROUPS = [
+  { el:"木", label:"肝胆系统", keys:["ALT","AST","TBIL"] },
+  { el:"火", label:"心血管系统", keys:["SBP","DBP","RHR"] },
+  { el:"土", label:"脾胃代谢", keys:["FBG","HbA1c","TG"] },
+  { el:"金", label:"呼吸系统", keys:["FVC","SpO2","LDL_C"] },
+  { el:"水", label:"肾脏内分泌", keys:["Cr","UA","VitD"] },
+];
+
 const RR = {
-  RHR:{u:"bpm",cn:"静息心率",o:"火",r:[{a1:0,a2:12,s:"A",l:70,h:120,n:"儿童心率高于成人"},{a1:13,a2:17,s:"A",l:60,h:100,n:"青春期心脏发育中"},{a1:18,a2:59,s:"A",l:60,h:100,n:"成人标准"},{a1:60,a2:120,s:"A",l:60,h:100,n:"老年窦房结退行性改变"}]},
+  // ── 木 · 肝胆 ──
   ALT:{u:"U/L",cn:"谷丙转氨酶",o:"木",r:[{a1:0,a2:12,s:"A",l:5,h:30,n:"儿童肝脏酶基线低"},{a1:13,a2:17,s:"M",l:7,h:35,n:"青春期男性轻度升高属正常"},{a1:13,a2:17,s:"F",l:5,h:30,n:"青春期女性雌激素保护肝脏"},{a1:18,a2:59,s:"M",l:7,h:40,n:"成年男性标准"},{a1:18,a2:59,s:"F",l:7,h:35,n:"成年女性上限略低"},{a1:60,a2:120,s:"A",l:5,h:40,n:"老年肝代谢下降"}]},
+  AST:{u:"U/L",cn:"谷草转氨酶",o:"木",r:[{a1:0,a2:12,s:"A",l:8,h:36,n:"儿童标准"},{a1:13,a2:17,s:"A",l:8,h:40,n:"青春期标准"},{a1:18,a2:59,s:"M",l:8,h:40,n:"成年男性标准"},{a1:18,a2:59,s:"F",l:8,h:35,n:"成年女性标准"},{a1:60,a2:120,s:"A",l:8,h:40,n:"老年人标准"}]},
+  TBIL:{u:"μmol/L",cn:"总胆红素",o:"木",r:[{a1:0,a2:12,s:"A",l:2,h:17,n:"儿童标准"},{a1:13,a2:17,s:"A",l:3.4,h:17.1,n:"青少年标准"},{a1:18,a2:59,s:"A",l:3.4,h:17.1,n:"成人标准"},{a1:60,a2:120,s:"A",l:3.4,h:20,n:"老年人上限略宽"}]},
+  // ── 火 · 心血管 ──
+  SBP:{u:"mmHg",cn:"收缩压",o:"火",r:[{a1:0,a2:17,s:"A",l:85,h:120,n:"青少年血压波动大"},{a1:18,a2:59,s:"A",l:90,h:120,n:"成人标准"},{a1:60,a2:120,s:"A",l:90,h:140,n:"老年动脉硬化"}]},
+  DBP:{u:"mmHg",cn:"舒张压",o:"火",r:[{a1:0,a2:17,s:"A",l:50,h:80,n:"青少年标准"},{a1:18,a2:59,s:"A",l:60,h:80,n:"成人标准"},{a1:60,a2:120,s:"A",l:60,h:90,n:"老年人上限放宽"}]},
+  RHR:{u:"bpm",cn:"静息心率",o:"火",r:[{a1:0,a2:12,s:"A",l:70,h:120,n:"儿童心率高于成人"},{a1:13,a2:17,s:"A",l:60,h:100,n:"青春期心脏发育中"},{a1:18,a2:59,s:"A",l:60,h:100,n:"成人标准"},{a1:60,a2:120,s:"A",l:60,h:100,n:"老年窦房结退行性改变"}]},
+  // ── 土 · 脾胃代谢 ──
   FBG:{u:"mmol/L",cn:"空腹血糖",o:"土",r:[{a1:0,a2:12,s:"A",l:3.3,h:5.6,n:"儿童低血糖阈值更低"},{a1:13,a2:17,s:"A",l:3.9,h:5.8,n:"青春期生长激素旺盛"},{a1:18,a2:59,s:"A",l:3.9,h:6.1,n:"成人标准"},{a1:60,a2:120,s:"A",l:4,h:6.5,n:"老年人上限放宽"}]},
+  HbA1c:{u:"%",cn:"糖化血红蛋白",o:"土",r:[{a1:0,a2:17,s:"A",l:4,h:5.7,n:"青少年标准"},{a1:18,a2:59,s:"A",l:4,h:5.7,n:"成人标准（≥6.5%为糖尿病）"},{a1:60,a2:120,s:"A",l:4,h:6.5,n:"老年人目标放宽"}]},
+  TG:{u:"mmol/L",cn:"甘油三酯",o:"土",r:[{a1:0,a2:17,s:"A",l:0.3,h:1.5,n:"青少年标准"},{a1:18,a2:59,s:"A",l:0.4,h:1.7,n:"成人标准（≥2.3为偏高）"},{a1:60,a2:120,s:"A",l:0.4,h:1.7,n:"老年人标准"}]},
+  // ── 金 · 呼吸 ──
   FVC:{u:"L",cn:"肺活量",o:"金",r:[{a1:0,a2:12,s:"A",l:.5,h:2.5,n:"儿童肺泡发育中"},{a1:13,a2:17,s:"M",l:2.5,h:5,n:"青春期男性胸廓发育"},{a1:13,a2:17,s:"F",l:2,h:4,n:"青春期女性肺活量低于男性"},{a1:18,a2:59,s:"M",l:3,h:5.5,n:"成年男性峰值期"},{a1:18,a2:59,s:"F",l:2.5,h:4.5,n:"成年女性标准"},{a1:60,a2:120,s:"A",l:2,h:4,n:"老年肺弹性下降"}]},
-  Cr:{u:"μmol/L",cn:"肌酐",o:"水",r:[{a1:0,a2:12,s:"A",l:20,h:60,n:"儿童肌肉量少"},{a1:13,a2:17,s:"M",l:40,h:90,n:"青春期男性肌肉增长"},{a1:13,a2:17,s:"F",l:35,h:80,n:"青春期女性肌肉增长较小"},{a1:18,a2:59,s:"M",l:57,h:111,n:"成年男性标准"},{a1:18,a2:59,s:"F",l:44,h:97,n:"成年女性标准"},{a1:60,a2:120,s:"A",l:44,h:106,n:"老年肌肉萎缩"}]},
-  BP:{u:"mmHg",cn:"收缩压",o:"火",r:[{a1:0,a2:17,s:"A",l:85,h:120,n:"青少年血压波动大"},{a1:18,a2:59,s:"A",l:90,h:120,n:"成人标准"},{a1:60,a2:120,s:"A",l:90,h:140,n:"老年动脉硬化"}]},
-  TC:{u:"mmol/L",cn:"总胆固醇",o:"土",r:[{a1:0,a2:17,s:"A",l:2.8,h:5,n:"儿童青少年标准"},{a1:18,a2:59,s:"A",l:3,h:5.2,n:"成人标准"},{a1:60,a2:120,s:"A",l:3,h:5.6,n:"老年人放宽"}]}
+  SpO2:{u:"%",cn:"血氧饱和度",o:"金",r:[{a1:0,a2:59,s:"A",l:95,h:100,n:"正常≥95%，<90%为呼吸衰竭"},{a1:60,a2:120,s:"A",l:93,h:100,n:"老年人基线略低"}]},
+  LDL_C:{u:"mmol/L",cn:"低密度脂蛋白",o:"金",r:[{a1:0,a2:17,s:"A",l:1,h:2.8,n:"青少年标准"},{a1:18,a2:59,s:"A",l:1,h:3.4,n:"成人标准（≥4.1为很高）"},{a1:60,a2:120,s:"A",l:1,h:3.4,n:"老年人标准"}]},
+  // ── 水 · 肾脏内分泌 ──
+  Cr:{u:"μmol/L",cn:"血肌酐",o:"水",r:[{a1:0,a2:12,s:"A",l:20,h:60,n:"儿童肌肉量少"},{a1:13,a2:17,s:"M",l:40,h:90,n:"青春期男性肌肉增长"},{a1:13,a2:17,s:"F",l:35,h:80,n:"青春期女性肌肉增长较小"},{a1:18,a2:59,s:"M",l:57,h:111,n:"成年男性标准"},{a1:18,a2:59,s:"F",l:44,h:97,n:"成年女性标准"},{a1:60,a2:120,s:"A",l:44,h:106,n:"老年肌肉萎缩"}]},
+  UA:{u:"μmol/L",cn:"尿酸",o:"水",r:[{a1:0,a2:17,s:"A",l:120,h:340,n:"青少年标准"},{a1:18,a2:59,s:"M",l:149,h:416,n:"成年男性标准"},{a1:18,a2:59,s:"F",l:89,h:357,n:"成年女性标准（绝经后上限升高）"},{a1:60,a2:120,s:"M",l:149,h:416,n:"老年男性标准"},{a1:60,a2:120,s:"F",l:149,h:416,n:"老年女性标准"}]},
+  VitD:{u:"ng/mL",cn:"25-羟维生素D",o:"水",r:[{a1:0,a2:17,s:"A",l:20,h:100,n:"青少年标准（<20为缺乏）"},{a1:18,a2:59,s:"A",l:20,h:100,n:"成人标准（30-50为理想）"},{a1:60,a2:120,s:"A",l:20,h:100,n:"老年人骨质疏松风险需≥30"}]},
 };
+
+// OCR 别名映射：不同医院使用的名称/缩写 → 标准 key
+const OCR_ALIASES = {
+  // 直接匹配
+  "ALT":"ALT","AST":"AST","TBIL":"TBIL","SBP":"SBP","DBP":"DBP","RHR":"RHR",
+  "FBG":"FBG","HbA1c":"HbA1c","TG":"TG","FVC":"FVC","SpO2":"SpO2","Cr":"Cr","UA":"UA","VitD":"VitD",
+  // 英文别名
+  "LDL-C":"LDL_C","LDL_C":"LDL_C","LDL":"LDL_C","LDLC":"LDL_C",
+  "25-OH-D":"VitD","25OHD":"VitD","VD":"VitD","VITD":"VitD",
+  "GLU":"FBG","FPG":"FBG",
+  "CREA":"Cr","CRE":"Cr","SCr":"Cr",
+  "URIC":"UA","UREA":"UA",
+  "SPO2":"SpO2","SAO2":"SpO2",
+  "HR":"RHR","PULSE":"RHR",
+  "BP":"SBP", // 旧 key 兼容
+  "TC":"TG", // 旧 TC 映射到 TG（最接近的代谢指标）
+  // 中文别名
+  "谷丙转氨酶":"ALT","谷草转氨酶":"AST","总胆红素":"TBIL",
+  "收缩压":"SBP","舒张压":"DBP","心率":"RHR","静息心率":"RHR",
+  "空腹血糖":"FBG","糖化血红蛋白":"HbA1c","甘油三酯":"TG",
+  "肺活量":"FVC","血氧":"SpO2","血氧饱和度":"SpO2",
+  "低密度脂蛋白":"LDL_C","低密度脂蛋白胆固醇":"LDL_C",
+  "肌酐":"Cr","血肌酐":"Cr","尿酸":"UA",
+  "维生素D":"VitD","25羟维生素D":"VitD",
+};
+
+// 单位换算：将常见非标准单位统一到标准单位
+function normalizeUnit(key, value, sourceUnit) {
+  if (value == null || isNaN(value)) return null;
+  const std = RR[key]?.u;
+  if (!std || !sourceUnit) return value;
+  const su = sourceUnit.toLowerCase().replace(/\s/g,"");
+  const tu = std.toLowerCase().replace(/\s/g,"");
+  if (su === tu) return value;
+  // 血糖 mg/dL → mmol/L
+  if (key === "FBG" && su.includes("mg/dl")) return Math.round(value / 18.02 * 100) / 100;
+  // 胆红素 mg/dL → μmol/L
+  if (key === "TBIL" && su.includes("mg/dl")) return Math.round(value * 17.1 * 100) / 100;
+  // 肌酐 mg/dL → μmol/L
+  if (key === "Cr" && su.includes("mg/dl")) return Math.round(value * 88.4 * 100) / 100;
+  // 尿酸 mg/dL → μmol/L
+  if (key === "UA" && su.includes("mg/dl")) return Math.round(value * 59.48 * 100) / 100;
+  // 胆固醇/TG/LDL mg/dL → mmol/L
+  if ((key === "TG" || key === "LDL_C") && su.includes("mg/dl")) return Math.round(value / 38.67 * 100) / 100;
+  // VitD nmol/L → ng/mL
+  if (key === "VitD" && su.includes("nmol")) return Math.round(value / 2.496 * 100) / 100;
+  return value;
+}
 
 function gR(k,age,sex) {
   const sp=RR[k]; if(!sp) return null;
@@ -76,7 +146,7 @@ function gR(k,age,sex) {
 }
 
 function oScore(ms,organ,age,sex) {
-  const om=ms.filter(m=>RR[m.key]&&RR[m.key].o===organ); if(!om.length) return 50;
+  const om=ms.filter(m=>RR[m.key]&&RR[m.key].o===organ&&m.value!=null); if(!om.length) return 50;
   const scores=om.map(m=>{const r=gR(m.key,age,sex);if(!r)return 50;const mid=(r.l+r.h)/2,half=(r.h-r.l)/2;if(half<=0)return 50;if(m.value<r.l)return Math.max(0,50-((r.l-m.value)/half)*40);if(m.value>r.h)return Math.max(0,50-((m.value-r.h)/half)*40);return 100-(Math.abs(m.value-mid)/half)*40;});
   return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10;
 }
@@ -339,9 +409,15 @@ const sC = {alert:"#c44040",caution:"#d4a840",optimal:"#52b09a"};
 const sL = {alert:"预警",caution:"观察",optimal:"稳定"};
 
 // ════════════════════════════════════════
-// DEMO DATA
+// DEMO DATA — 15 标准化槽位
 // ════════════════════════════════════════
-const INIT_M = [{key:"RHR",value:68},{key:"ALT",value:52},{key:"FBG",value:5.2},{key:"FVC",value:3.1},{key:"Cr",value:82},{key:"BP",value:126},{key:"TC",value:4.8}];
+const INIT_M = [
+  {key:"ALT",value:null},{key:"AST",value:null},{key:"TBIL",value:null},
+  {key:"SBP",value:null},{key:"DBP",value:null},{key:"RHR",value:null},
+  {key:"FBG",value:null},{key:"HbA1c",value:null},{key:"TG",value:null},
+  {key:"FVC",value:null},{key:"SpO2",value:null},{key:"LDL_C",value:null},
+  {key:"Cr",value:null},{key:"UA",value:null},{key:"VitD",value:null},
+];
 
 // ════════════════════════════════════════
 // LOGIN / REGISTER SCREEN
@@ -567,7 +643,7 @@ function Dashboard({ user, setUser, onLogout }) {
   const destWX = useMemo(()=>applyTemp(calcWX(bazi),dy,ln), [bazi,dy,ln]);
   const medWX = useMemo(()=>{const r={};["木","火","土","金","水"].forEach(e=>r[e]=oScore(metrics,e,age,sex));return r;}, [metrics,age,sex]);
   const colls = useMemo(()=>calcColls(medWX,destWX), [medWX,destWX]);
-  const anoms = useMemo(()=>metrics.filter(m=>{const r=gR(m.key,age,sex);return r&&(m.value<r.l||m.value>r.h);}).map(m=>({...m,ref:gR(m.key,age,sex),st:m.value>(gR(m.key,age,sex)?.h||999)?"偏高":"偏低"})), [metrics,age,sex]);
+  const anoms = useMemo(()=>metrics.filter(m=>{if(m.value==null)return false;const r=gR(m.key,age,sex);return r&&(m.value<r.l||m.value>r.h);}).map(m=>({...m,ref:gR(m.key,age,sex),st:m.value>(gR(m.key,age,sex)?.h||999)?"偏高":"偏低"})), [metrics,age,sex]);
 
   const pls = [{lb:"年柱",s:bazi.year[0],b:bazi.year[1]},{lb:"月柱",s:bazi.month[0],b:bazi.month[1]},{lb:"日柱",s:bazi.day[0],b:bazi.day[1]},{lb:"时柱",s:bazi.hour[0],b:bazi.hour[1]}];
   const baziStr = pls.map(p=>p.s+p.b).join(" ");
@@ -580,7 +656,8 @@ function Dashboard({ user, setUser, onLogout }) {
   }, [user, setUser]);
 
   const updateMetric = useCallback((key, value) => {
-    const newM = metrics.map(m => m.key===key ? {...m, value:parseFloat(value)||0} : m);
+    const parsed = (value === null || value === "" || value === undefined) ? null : parseFloat(value);
+    const newM = metrics.map(m => m.key===key ? {...m, value: (parsed !== null && isNaN(parsed)) ? null : parsed} : m);
     setMetrics(newM);
     saveData(newM);
   }, [metrics, saveData]);
@@ -600,9 +677,17 @@ function Dashboard({ user, setUser, onLogout }) {
       } else {
         setPipe(p=>p.map((s,i)=>i===1?{...s,st:"done"}:s));
         if(res.metrics?.length) {
-          const ks=Object.keys(RR);
           const newM=[...metrics];
-          res.metrics.filter(m=>m.value!=null).forEach(m=>{const code=ks.find(k=>k===m.code)||m.code;const idx=newM.findIndex(x=>x.key===code);if(idx>=0)newM[idx]={...newM[idx],value:m.value};else newM.push({key:code,value:m.value});});
+          res.metrics.filter(m=>m.value!=null).forEach(m=>{
+            // 通过别名映射找到标准key
+            const stdKey = OCR_ALIASES[m.code] || OCR_ALIASES[m.name] || m.code;
+            if (!RR[stdKey]) return; // 不在15个标准指标中则跳过
+            // 单位换算
+            const normalized = normalizeUnit(stdKey, m.value, m.unit);
+            if (normalized == null) return;
+            const idx=newM.findIndex(x=>x.key===stdKey);
+            if(idx>=0) newM[idx]={...newM[idx],value:normalized};
+          });
           setMetrics(newM); saveData(newM);
         }
       }
@@ -854,21 +939,47 @@ function Dashboard({ user, setUser, onLogout }) {
                 <span style={{ fontSize:".85rem", color:"#5e5a52" }}>{anoms.length} 个异常项待分析</span>
               </div>
 
-              {/* Editable metrics */}
+              {/* Editable metrics — 五行分组 */}
               <div style={{ ...S.card, marginTop:16 }}>
-                <div style={S.label}>当前指标（可直接调整数值）</div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:6, marginTop:10 }}>
-                  {metrics.map(m => {
-                    const ref = gR(m.key,age,sex); const ok2 = ref && m.value>=ref.l && m.value<=ref.h;
-                    return (
-                      <div key={m.key} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 10px", background:"#16161c", borderLeft:`2px solid ${ref?EC[ref.o]:"#5e5a52"}` }}>
-                        <span style={{ fontSize:".85rem", color:"#9a9488", width:60 }}>{ref?.cn||m.key}</span>
-                        <input type="number" value={m.value} step="0.1" onChange={e=>updateMetric(m.key,e.target.value)}
-                          style={{ width:64, background:"#0c0c0f", border:"1px solid rgba(196,162,101,.08)", color:ok2?"#f0ece4":"#c44040", padding:"4px 6px", ...S.mono, fontSize:".9rem", outline:"none", textAlign:"center" }}/>
-                        <span style={{ fontSize:".72rem", color:"#3a3832" }}>{ref?.u}</span>
+                <div style={S.label}>当前指标 · 五行标准化</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:10 }}>
+                  {WX_GROUPS.map(g => (
+                    <div key={g.el} style={{ padding:"8px 10px", background:"rgba(0,0,0,.15)", borderLeft:`3px solid ${EC[g.el]}` }}>
+                      <div style={{ fontSize:".78rem", color:EC[g.el], marginBottom:6 }}>{g.el} · {g.label}</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:6 }}>
+                        {g.keys.map(k => {
+                          const m = metrics.find(x=>x.key===k);
+                          const ref = gR(k,age,sex);
+                          const hasVal = m?.value != null;
+                          const inRange = hasVal && ref && m.value>=ref.l && m.value<=ref.h;
+                          const isAnom = hasVal && ref && (m.value<ref.l || m.value>ref.h);
+                          return (
+                            <div key={k} style={{ padding:"6px 8px", background:"#16161c", position:"relative" }}>
+                              <div style={{ fontSize:".82rem", color:hasVal?"#e0dcd4":"#3a3832" }}>
+                                {ref?.cn||k}<sup style={{ fontSize:".55rem", color:"#5e5a52", marginLeft:2, verticalAlign:"super" }}>{k.replace("_","-")}</sup>
+                              </div>
+                              <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:4 }}>
+                                <input
+                                  type="number" step="0.1"
+                                  value={hasVal ? m.value : ""}
+                                  placeholder="待录入"
+                                  onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
+                                  style={{
+                                    width:"100%", background:"#0c0c0f", padding:"5px 6px", outline:"none", textAlign:"center",
+                                    ...S.mono, fontSize:".9rem",
+                                    color: !hasVal ? "#3a3832" : inRange ? "#f0ece4" : "#c44040",
+                                    border: isAnom ? "1px solid rgba(196,64,64,0.5)" : "1px solid rgba(196,162,101,.08)",
+                                    animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
+                                  }}
+                                />
+                              </div>
+                              <div style={{ fontSize:".65rem", color:"#3a3832", marginTop:2, textAlign:"center" }}>{ref?.u}</div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1277,41 +1388,126 @@ function Dashboard({ user, setUser, onLogout }) {
             </div>
           )}
 
-          {/* ══ METRICS ══ */}
+          {/* ══ METRICS — 五行阵列 ══ */}
           {tab==="metrics" && (
             <div>
-              <div style={{ fontSize:".9rem", color:"#9a9488", marginBottom:14 }}>{age}岁 · {sex==="M"?"男":"女"}性 — 参考范围已按人口统计学调整</div>
-              {metrics.map(m => {
-                const ref = gR(m.key, age, sex); if (!ref) return null;
-                const inR = m.value>=ref.l && m.value<=ref.h;
-                const pct = Math.min(100,Math.max(0,(m.value-ref.l)/(ref.h-ref.l)*100));
-                return (
-                  <div key={m.key} style={{ padding:"14px 18px", ...S.card, borderLeft:`3px solid ${EC[ref.o]}`, marginBottom:6 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                      <div>
-                        <span style={{ fontSize:"1rem", color:"#e0dcd4" }}>{ref.cn}</span>
-                        <span style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52", marginLeft:8 }}>{m.key}</span>
-                        <span style={{ fontSize:".85rem", color:EC[ref.o], marginLeft:8 }}>{ref.o}</span>
+              <div style={{ fontSize:".9rem", color:"#9a9488", marginBottom:16 }}>{age}岁 · {sex==="M"?"男":"女"}性 — 参考范围已按人口统计学调整</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+                {WX_GROUPS.map(g => {
+                  const filledCount = g.keys.filter(k => metrics.find(m=>m.key===k)?.value != null).length;
+                  return (
+                    <div key={g.el} style={{
+                      ...S.card, padding:0, overflow:"hidden",
+                      borderLeft:`4px solid ${EC[g.el]}`,
+                    }}>
+                      {/* Group header */}
+                      <div style={{
+                        padding:"14px 20px", display:"flex", justifyContent:"space-between", alignItems:"center",
+                        background:`linear-gradient(90deg, ${EC[g.el]}08, transparent)`,
+                        borderBottom:`1px solid ${EC[g.el]}15`,
+                      }}>
+                        <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
+                          <span style={{ fontSize:"1.4rem", color:EC[g.el], fontWeight:600 }}>{g.el}</span>
+                          <span style={{ fontSize:"1rem", color:"#e0dcd4" }}>{g.label}</span>
+                          <span style={{ fontSize:".75rem", color:"#5e5a52" }}>{EO[g.el]}</span>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <div style={{ ...S.mono, fontSize:".72rem", color:filledCount===3?"#52b09a":"#5e5a52" }}>
+                            {filledCount}/3 已录入
+                          </div>
+                          <div style={{ width:36, height:4, background:"#08080a", borderRadius:2 }}>
+                            <div style={{ height:"100%", width:(filledCount/3*100)+"%", background:EC[g.el], borderRadius:2, transition:"width .4s" }}/>
+                          </div>
+                        </div>
                       </div>
-                      <span style={{ ...S.mono, fontSize:".75rem", padding:"2px 8px", background:inR?"rgba(82,176,154,.08)":"rgba(196,64,64,.08)", color:inR?"#52b09a":"#c44040" }}>
-                        {inR?"正常":m.value>ref.h?"偏高":"偏低"}
-                      </span>
+
+                      {/* Metric cards */}
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:0 }}>
+                        {g.keys.map((k, ki) => {
+                          const m = metrics.find(x=>x.key===k);
+                          const ref = gR(k, age, sex);
+                          if (!ref) return null;
+                          const hasVal = m?.value != null;
+                          const inR = hasVal && m.value >= ref.l && m.value <= ref.h;
+                          const isAnom = hasVal && (m.value < ref.l || m.value > ref.h);
+                          const pct = hasVal ? Math.min(100, Math.max(0, (m.value - ref.l) / (ref.h - ref.l) * 100)) : -1;
+
+                          return (
+                            <div key={k} style={{
+                              padding:"16px 18px",
+                              borderRight: ki < 2 ? `1px solid ${EC[g.el]}10` : "none",
+                              position:"relative",
+                              background: isAnom ? "rgba(196,64,64,0.03)" : "transparent",
+                            }}>
+                              {/* Name + code */}
+                              <div style={{ marginBottom:10 }}>
+                                <span style={{ fontSize:"1.05rem", color: hasVal ? "#e0dcd4" : "#3a3832", fontWeight: hasVal ? 400 : 300 }}>
+                                  {ref.cn}
+                                </span>
+                                <sup style={{ fontSize:".6rem", color:"#5e5a52", marginLeft:3, verticalAlign:"super", fontFamily:"'JetBrains Mono',monospace" }}>
+                                  {k.replace("_","-")}
+                                </sup>
+                              </div>
+
+                              {/* Value input + unit */}
+                              <div style={{ display:"flex", alignItems:"baseline", gap:6, marginBottom:10 }}>
+                                <input
+                                  type="number" step="0.1"
+                                  value={hasVal ? m.value : ""}
+                                  placeholder="待录入"
+                                  onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
+                                  style={{
+                                    width:90, background:"#0c0c0f", padding:"8px 10px", outline:"none", textAlign:"center",
+                                    ...S.mono, fontSize:"1.2rem", borderRadius:2,
+                                    color: !hasVal ? "#3a3832" : inR ? "#f0ece4" : "#c44040",
+                                    border: isAnom ? "1px solid rgba(196,64,64,0.4)" : "1px solid rgba(196,162,101,.1)",
+                                    animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
+                                  }}
+                                />
+                                <span style={{ fontSize:".78rem", color:"#5e5a52", fontFamily:"'JetBrains Mono',monospace" }}>{ref.u}</span>
+                              </div>
+
+                              {/* Status badge */}
+                              <div style={{ marginBottom:8 }}>
+                                {hasVal ? (
+                                  <span style={{
+                                    ...S.mono, fontSize:".72rem", padding:"2px 8px",
+                                    background: inR ? "rgba(82,176,154,.08)" : "rgba(196,64,64,.08)",
+                                    color: inR ? "#52b09a" : "#c44040",
+                                  }}>
+                                    {inR ? "正常" : m.value > ref.h ? "偏高 ↑" : "偏低 ↓"}
+                                  </span>
+                                ) : (
+                                  <span style={{ ...S.mono, fontSize:".72rem", color:"#2a2a2a" }}>— 待录入 —</span>
+                                )}
+                              </div>
+
+                              {/* Range bar */}
+                              <div style={{ height:4, background:"#08080a", borderRadius:2, marginBottom:6 }}>
+                                {hasVal && (
+                                  <div style={{
+                                    height:"100%", width: Math.min(100, Math.max(2, pct)) + "%",
+                                    background: inR ? "#52b09a" : "#c44040",
+                                    opacity:.6, transition:"width .4s", borderRadius:2,
+                                  }}/>
+                                )}
+                              </div>
+
+                              {/* Reference range + note */}
+                              <div style={{ fontSize:".75rem", color:"#3a3832", marginBottom:4 }}>
+                                参考 {ref.l} – {ref.h} {ref.u}
+                              </div>
+                              <div style={{ fontSize:".78rem", color:"#5e5a52", lineHeight:1.6 }}>
+                                {ref.n}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-                      <input type="number" value={m.value} step="0.1" onChange={e=>updateMetric(m.key,e.target.value)}
-                        style={{ width:80, background:"#16161c", border:"1px solid rgba(196,162,101,.1)", color:inR?"#f0ece4":"#c44040", padding:"6px 8px", ...S.mono, fontSize:"1.1rem", outline:"none", textAlign:"center" }}/>
-                      <span style={{ fontSize:".8rem", color:"#5e5a52" }}>{ref.u}</span>
-                      <span style={{ fontSize:".75rem", color:"#3a3832" }}>参考 {ref.l}–{ref.h}</span>
-                    </div>
-                    <div style={{ height:4, background:"#08080a", marginBottom:8, borderRadius:1 }}>
-                      <div style={{ height:"100%", width:pct+"%", background:inR?"#52b09a":"#c44040", opacity:.6, transition:"width .4s", borderRadius:1 }}/>
-                    </div>
-                    <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.8 }}>
-                      <span style={{ ...S.mono, fontSize:".72rem", color:"#6a5a35" }}>📖 {age}岁{sex==="M"?"男":"女"}性</span> — {ref.n}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -1321,6 +1517,10 @@ function Dashboard({ user, setUser, onLogout }) {
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap');
         @keyframes pulse { 0%,100% { opacity:.4; } 50% { opacity:1; } }
         @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        @keyframes breathe {
+          0%,100% { border-color: rgba(196,64,64,0.2); box-shadow: 0 0 0 0 rgba(196,64,64,0); }
+          50% { border-color: rgba(196,64,64,0.6); box-shadow: 0 0 8px 2px rgba(196,64,64,0.15); }
+        }
         * { box-sizing:border-box; margin:0; padding:0; }
         ::-webkit-scrollbar { width:4px; }
         ::-webkit-scrollbar-thumb { background:#6a5a35; border-radius:2px; }
