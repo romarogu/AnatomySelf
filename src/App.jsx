@@ -155,8 +155,16 @@ function calcColls(med,dest) {
   return ["火","土","金","水","木"].map(el=>{
     const ms=med[el]||50,ds=dest[el]||50,dv=Math.abs(ms-ds);
     const corr=(ms<50&&ds<50)?Math.min(100,100-dv+20):Math.max(0,100-dv*1.5);
-    const lv=(dv>30||(ms<45&&ds<40))?"alert":(dv>15||ms<55)?"caution":"optimal";
-    return {el,med:Math.round(ms*10)/10,dest:Math.round(ds*10)/10,dv:Math.round(dv*10)/10,corr:Math.round(corr*10)/10,lv};
+    // 判断逻辑：区分"实际异常"和"先天短板"
+    // med<45 = 体检有实际异常指标
+    // dest<35 = 命理五行严重偏弱
+    // dv>30 = 医学与命理偏离大（未必是坏事，可能是命理弱但体检正常）
+    const hasRealAnomaly = ms < 45; // 体检层有实际问题
+    const hasDestinyWeakness = ds < 35; // 命理层严重偏弱
+    const lv = hasRealAnomaly ? "alert" :
+               (hasRealAnomaly && hasDestinyWeakness) ? "alert" :
+               (dv > 30 || hasDestinyWeakness || ms < 55) ? "caution" : "optimal";
+    return {el,med:Math.round(ms*10)/10,dest:Math.round(ds*10)/10,dv:Math.round(dv*10)/10,corr:Math.round(corr*10)/10,lv,hasRealAnomaly,hasDestinyWeakness};
   });
 }
 
@@ -406,7 +414,7 @@ const S = {
   input: { width:"100%", background:"#16161c", border:"1px solid rgba(196,162,101,0.12)", color:"#f0ece4", padding:"10px 14px", fontFamily:"'JetBrains Mono',monospace", fontSize:"0.95rem", outline:"none", borderRadius:2 },
 };
 const sC = {alert:"#c44040",caution:"#d4a840",optimal:"#52b09a"};
-const sL = {alert:"预警",caution:"观察",optimal:"稳定"};
+const sL = {alert:"重点关注",caution:"留意",optimal:"和谐"};
 
 // ════════════════════════════════════════
 // DEMO DATA — 15 标准化槽位
@@ -714,33 +722,54 @@ function Dashboard({ user, setUser, onLogout }) {
 
   // ── SCIENCE BRAIN ──
   const doSci = useCallback(async () => {
-    if (!anoms.length) { setSci({ items: [], summary: "所有指标均在正常范围内，无需科学解读。" }); setPipe(p=>p.map((s,i)=>i===2?{...s,st:"done"}:s)); return; }
     setSciL(true); setSci(null); setPipe(p=>p.map((s,i)=>i===2?{...s,st:"running"}:s));
     try {
-      const anomalyData = anoms.map(a => ({ key: a.key, cn: a.ref.cn, value: a.value, unit: a.ref.u, low: a.ref.l, high: a.ref.h, status: a.st }));
-      const res = await apiScience({ age, sex, anomalies: anomalyData });
-      setSci(res);
+      // 构建全部已录入指标的概况（不只是异常项）
+      const filledMetrics = metrics.filter(m => m.value != null);
+      const allData = filledMetrics.map(m => {
+        const ref = gR(m.key, age, sex);
+        if (!ref) return null;
+        const inRange = m.value >= ref.l && m.value <= ref.h;
+        return { key: m.key, cn: ref.cn, value: m.value, unit: ref.u, low: ref.l, high: ref.h, status: inRange ? "正常" : (m.value > ref.h ? "偏高" : "偏低"), organ: ref.o };
+      }).filter(Boolean);
+
+      if (anoms.length > 0) {
+        // 有异常 → 重点分析异常项
+        const anomalyData = anoms.map(a => ({ key: a.key, cn: a.ref.cn, value: a.value, unit: a.ref.u, low: a.ref.l, high: a.ref.h, status: a.st }));
+        const res = await apiScience({ age, sex, anomalies: anomalyData });
+        setSci(res);
+      } else {
+        // 全部正常 → 发送全部数据做健康确认
+        const res = await apiScience({ age, sex, anomalies: [], allMetrics: allData });
+        setSci(res);
+      }
       setPipe(p=>p.map((s,i)=>i===2?{...s,st:"done"}:s));
     } catch (err) {
       setSci({ items: [], summary: "科学大脑分析失败: " + err.message });
       setPipe(p=>p.map((s,i)=>i===2?{...s,st:"idle"}:s));
     }
     setSciL(false);
-  }, [anoms, age, sex]);
+  }, [anoms, metrics, age, sex]);
 
-  // ── DESTINY BRAIN ──
+  // ── DESTINY BRAIN — 始终独立工作 ──
   const doDst = useCallback(async () => {
-    if (!anoms.length && (!sci || !sci.items || !sci.items.length)) {
-      setDst({ collision_items: [], temporal_outlook: "无异常指标，无需命理对撞。" });
-      setPipe(p=>p.map((s,i)=>i===3?{...s,st:"done"}:s)); return;
-    }
     setDstL(true); setDst(null); setPipe(p=>p.map((s,i)=>i===3?{...s,st:"running"}:s));
 
+    // 构建 findings：优先用科学脑结果，否则用原始指标概况
     let findings;
     if (sci && sci.items && sci.items.length > 0) {
       findings = sci.items.map(it => it.metric_cn + "(" + it.organ_system + "): " + it.physiological_analysis).join("\n");
-    } else {
+    } else if (anoms.length > 0) {
       findings = anoms.map(a => a.ref.cn + "(" + a.ref.o + "): " + a.key + "=" + a.value + a.ref.u + " " + a.st).join("\n");
+    } else {
+      // 全部正常 → 告知命理脑当前健康状况良好，让它聚焦先天格局分析
+      const filledMetrics = metrics.filter(m => m.value != null);
+      const summary = filledMetrics.map(m => {
+        const ref = gR(m.key, age, sex);
+        return ref ? `${ref.cn}(${ref.o}): ${m.value}${ref.u} 正常` : null;
+      }).filter(Boolean).join("\n");
+      findings = "所有体检指标均在正常范围内。\n" + (summary || "暂无录入指标。") +
+        "\n\n请重点分析：1) 八字先天五行格局中哪些脏腑为薄弱环节；2) 当前大运流年对各脏腑的影响趋势；3) 虽然体检正常但命理上需要长期关注的方向。";
     }
 
     try {
@@ -761,7 +790,7 @@ function Dashboard({ user, setUser, onLogout }) {
       setPipe(p=>p.map((s,i)=>i===3?{...s,st:"idle"}:s));
     }
     setDstL(false);
-  }, [sci, anoms, baziStr, bazi, dy, ln, destWX]);
+  }, [sci, anoms, metrics, age, sex, baziStr, bazi, dy, ln, destWX]);
 
   useEffect(() => {
     // Auto-trigger destiny brain when science completes
@@ -956,7 +985,10 @@ function Dashboard({ user, setUser, onLogout }) {
                   style={{ ...S.btn, opacity:sciL||dstL?.5:1, cursor:sciL||dstL?"wait":"pointer" }}>
                   {sciL?"⏳ 科学大脑分析中...":dstL?"⏳ 命理大脑对撞中...":"⚡ 启动双脑对撞分析"}
                 </button>
-                <span style={{ fontSize:".85rem", color:"#5e5a52" }}>{anoms.length} 个异常项待分析</span>
+                <span style={{ fontSize:".85rem", color:"#5e5a52" }}>
+                  {metrics.filter(m=>m.value!=null).length} 项指标已录入
+                  {anoms.length > 0 ? ` · ${anoms.length} 项异常` : " · 全部正常"}
+                </span>
               </div>
 
               {/* Editable metrics — Bento 五行阵列 */}
@@ -1115,8 +1147,15 @@ function Dashboard({ user, setUser, onLogout }) {
                           </div>
                         </div>
                         {coll?.dv > 30 && (
-                          <div style={{ marginTop:10, padding:"8px 12px", background:"rgba(196,64,64,0.06)", border:"1px solid rgba(196,64,64,0.12)", fontSize:".85rem", color:"#c44040" }}>
-                            ⚠ 偏离度 {coll.dv}% — 医学与命理在此维度存在显著分歧，需要关注
+                          <div style={{ marginTop:10, padding:"8px 12px",
+                            background: coll.hasRealAnomaly ? "rgba(196,64,64,0.06)" : "rgba(196,162,101,0.06)",
+                            border: `1px solid ${coll.hasRealAnomaly ? "rgba(196,64,64,0.12)" : "rgba(196,162,101,0.12)"}`,
+                            fontSize:".85rem", color: coll.hasRealAnomaly ? "#c44040" : "#c4a265"
+                          }}>
+                            {coll.hasRealAnomaly
+                              ? `⚠ 体检异常 + 命理偏弱 — 偏离度 ${coll.dv}%，此维度需要重点关注`
+                              : `☯ 先天短板提示 — 偏离度 ${coll.dv}%，体检虽正常但命理五行偏弱，建议长期留意`
+                            }
                           </div>
                         )}
                       </div>
@@ -1191,9 +1230,15 @@ function Dashboard({ user, setUser, onLogout }) {
                           </div>
                         </div>
                       ) : (
-                        <div style={{ ...S.card, textAlign:"center", padding:32, color:"#3a3832" }}>
-                          <div style={{ fontSize:"1.1rem", marginBottom:8 }}>{selectedDim} {EO[selectedDim]} 维度暂无异常</div>
-                          <div style={{ fontSize:".85rem" }}>此维度医学指标均在正常范围，命理脑未发现对撞冲突</div>
+                        <div style={{ ...S.card, padding:24 }}>
+                          <div style={{ fontSize:"1rem", color:"#c4a265", marginBottom:8 }}>{selectedDim} {EO[selectedDim]}</div>
+                          <div style={{ fontSize:".88rem", color:"#9a9488", lineHeight:1.8 }}>
+                            此维度体检指标均在正常范围内。
+                            {coll?.dest < 40
+                              ? `但命理五行中「${selectedDim}」仅占 ${coll.dest}%，属先天偏弱环节。建议启动双脑分析，获取命理脑的养生方向建议。`
+                              : "医学与命理在此维度较为和谐，可通过启动双脑分析获取更深入的格局解读。"
+                            }
+                          </div>
                         </div>
                       )}
 
