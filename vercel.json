@@ -3,8 +3,17 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "api/*.js": {
+    "api/ocr.js": {
       "maxDuration": 60
+    },
+    "api/science.js": {
+      "maxDuration": 30
+    },
+    "api/destiny.js": {
+      "maxDuration": 60
+    },
+    "api/health.js": {
+      "maxDuration": 5
     }
   }
 }

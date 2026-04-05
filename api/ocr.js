@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     const KEY = process.env.CLAUDE_API_KEY;
     if (!KEY) return res.json({ metrics: [], ocr_unavailable: true, message: '未配置 CLAUDE_API_KEY' });
 
-    // Use Anthropic Messages format via relay
+    // Anthropic Messages format via gptsapi.net relay
     const isPdf = mediaType === 'application/pdf';
     const doc = isPdf
       ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
