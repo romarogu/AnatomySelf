@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import * as d3 from "d3";
-import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiSaveUser, apiChat } from "./api.js";
+import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiLogout, apiSaveUser, apiChat } from "./api.js";
 
 // ════════════════════════════════════════
 // BAZI ENGINE
@@ -596,7 +596,7 @@ export default function App() {
     try { if (updated.userId) await apiSaveUser(updated.userId, updated); } catch {}
   }, [user]);
 
-  const handleLogout = useCallback(() => { setUser(null); setSetupDone(false); }, []);
+  const handleLogout = useCallback(() => { apiLogout(); setUser(null); setSetupDone(false); }, []);
 
   // Show auth screen
   if (!user) return <AuthScreen onLogin={handleLogin} />;
@@ -809,7 +809,10 @@ function Dashboard({ user, setUser, onLogout }) {
             </div>)}
           </div>
           <span style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}岁</span>
-          <button onClick={onLogout} style={{ background:"transparent", border:"1px solid rgba(196,162,101,.12)", color:"#5e5a52", padding:"4px 12px", fontSize:".8rem", cursor:"pointer", fontFamily:"'Noto Serif SC',serif" }}>退出</button>
+          <button onClick={onLogout} style={{ background:"rgba(196,64,64,.06)", border:"1px solid rgba(196,64,64,.2)", color:"#c44040", padding:"4px 14px", fontSize:".8rem", cursor:"pointer", fontFamily:"'Noto Serif SC',serif", borderRadius:2, transition:"all .2s" }}
+            onMouseEnter={e=>{e.target.style.background="rgba(196,64,64,.15)";}} onMouseLeave={e=>{e.target.style.background="rgba(196,64,64,.06)";}}>
+            退出登录
+          </button>
         </div>
       </div>
 
@@ -939,45 +942,45 @@ function Dashboard({ user, setUser, onLogout }) {
                 <span style={{ fontSize:".85rem", color:"#5e5a52" }}>{anoms.length} 个异常项待分析</span>
               </div>
 
-              {/* Editable metrics — 五行分组 */}
-              <div style={{ ...S.card, marginTop:16 }}>
-                <div style={S.label}>当前指标 · 五行标准化</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:10 }}>
+              {/* Editable metrics — Bento 五行阵列 */}
+              <div style={{ ...S.card, marginTop:16, padding:"12px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                  <div style={S.label}>当前指标 · 五行标准化</div>
+                  <div style={{ ...S.mono, fontSize:".65rem", color:metrics.filter(m=>m.value!=null).length===15?"#52b09a":"#5e5a52" }}>
+                    {metrics.filter(m=>m.value!=null).length}/15
+                  </div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>
                   {WX_GROUPS.map(g => (
-                    <div key={g.el} style={{ padding:"8px 10px", background:"rgba(0,0,0,.15)", borderLeft:`3px solid ${EC[g.el]}` }}>
-                      <div style={{ fontSize:".78rem", color:EC[g.el], marginBottom:6 }}>{g.el} · {g.label}</div>
-                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:6 }}>
-                        {g.keys.map(k => {
-                          const m = metrics.find(x=>x.key===k);
-                          const ref = gR(k,age,sex);
-                          const hasVal = m?.value != null;
-                          const inRange = hasVal && ref && m.value>=ref.l && m.value<=ref.h;
-                          const isAnom = hasVal && ref && (m.value<ref.l || m.value>ref.h);
-                          return (
-                            <div key={k} style={{ padding:"6px 8px", background:"#16161c", position:"relative" }}>
-                              <div style={{ fontSize:".82rem", color:hasVal?"#e0dcd4":"#3a3832" }}>
-                                {ref?.cn||k}<sup style={{ fontSize:".55rem", color:"#5e5a52", marginLeft:2, verticalAlign:"super" }}>{k.replace("_","-")}</sup>
-                              </div>
-                              <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:4 }}>
-                                <input
-                                  type="number" step="0.1"
-                                  value={hasVal ? m.value : ""}
-                                  placeholder="待录入"
-                                  onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
-                                  style={{
-                                    width:"100%", background:"#0c0c0f", padding:"5px 6px", outline:"none", textAlign:"center",
-                                    ...S.mono, fontSize:".9rem",
-                                    color: !hasVal ? "#3a3832" : inRange ? "#f0ece4" : "#c44040",
-                                    border: isAnom ? "1px solid rgba(196,64,64,0.5)" : "1px solid rgba(196,162,101,.08)",
-                                    animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
-                                  }}
-                                />
-                              </div>
-                              <div style={{ fontSize:".65rem", color:"#3a3832", marginTop:2, textAlign:"center" }}>{ref?.u}</div>
+                    <div key={g.el} style={{ background:"rgba(0,0,0,.2)", borderTop:`2px solid ${EC[g.el]}`, padding:"6px" }}>
+                      <div style={{ fontSize:".65rem", color:EC[g.el], marginBottom:4, textAlign:"center" }}>{g.el}·{g.label.slice(0,2)}</div>
+                      {g.keys.map(k => {
+                        const m = metrics.find(x=>x.key===k);
+                        const ref = gR(k,age,sex);
+                        const hasVal = m?.value != null;
+                        const inRange = hasVal && ref && m.value>=ref.l && m.value<=ref.h;
+                        const isAnom = hasVal && ref && (m.value<ref.l || m.value>ref.h);
+                        return (
+                          <div key={k} style={{ marginBottom:3 }}>
+                            <div style={{ fontSize:".6rem", color: hasVal?"#9a9488":"#2a2a2a", lineHeight:1.2 }}>
+                              {ref?.cn?.slice(0,4)||k}<sup style={{ fontSize:".42rem", color:"#3a3832" }}>{k.replace("_","-")}</sup>
                             </div>
-                          );
-                        })}
-                      </div>
+                            <input
+                              type="number" step="0.1" inputMode="decimal"
+                              value={hasVal ? m.value : ""}
+                              placeholder="—"
+                              onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
+                              style={{
+                                width:"100%", background:"#0c0c0f", padding:"3px 2px", outline:"none", textAlign:"center",
+                                ...S.mono, fontSize:".75rem", borderRadius:1,
+                                color: !hasVal ? "#2a2a2a" : inRange ? "#f0ece4" : "#c44040",
+                                border: isAnom ? "1px solid rgba(196,64,64,0.4)" : "1px solid rgba(196,162,101,.06)",
+                                animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   ))}
                 </div>
@@ -1388,120 +1391,98 @@ function Dashboard({ user, setUser, onLogout }) {
             </div>
           )}
 
-          {/* ══ METRICS — 五行阵列 ══ */}
+          {/* ══ METRICS — Bento 五行阵列 ══ */}
           {tab==="metrics" && (
             <div>
-              <div style={{ fontSize:".9rem", color:"#9a9488", marginBottom:16 }}>{age}岁 · {sex==="M"?"男":"女"}性 — 参考范围已按人口统计学调整</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-                {WX_GROUPS.map(g => {
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                <div style={{ fontSize:".85rem", color:"#9a9488" }}>{age}岁 · {sex==="M"?"男":"女"}性 — 参考范围已按人口统计学调整</div>
+                <div style={{ ...S.mono, fontSize:".7rem", color:"#3a3832" }}>
+                  {metrics.filter(m=>m.value!=null).length}/15 已录入
+                </div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                {WX_GROUPS.map((g, gi) => {
                   const filledCount = g.keys.filter(k => metrics.find(m=>m.key===k)?.value != null).length;
                   return (
                     <div key={g.el} style={{
                       ...S.card, padding:0, overflow:"hidden",
-                      borderLeft:`4px solid ${EC[g.el]}`,
+                      borderTop:`3px solid ${EC[g.el]}`,
+                      gridColumn: gi >= 3 ? "span 1" : undefined,
                     }}>
-                      {/* Group header */}
+                      {/* Group header — compact */}
                       <div style={{
-                        padding:"14px 20px", display:"flex", justifyContent:"space-between", alignItems:"center",
-                        background:`linear-gradient(90deg, ${EC[g.el]}08, transparent)`,
-                        borderBottom:`1px solid ${EC[g.el]}15`,
+                        padding:"6px 10px", display:"flex", justifyContent:"space-between", alignItems:"center",
+                        background:`linear-gradient(135deg, ${EC[g.el]}0a, transparent)`,
                       }}>
-                        <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
-                          <span style={{ fontSize:"1.4rem", color:EC[g.el], fontWeight:600 }}>{g.el}</span>
-                          <span style={{ fontSize:"1rem", color:"#e0dcd4" }}>{g.label}</span>
-                          <span style={{ fontSize:".75rem", color:"#5e5a52" }}>{EO[g.el]}</span>
+                        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                          <span style={{ fontSize:"1rem", color:EC[g.el], fontWeight:600 }}>{g.el}</span>
+                          <span style={{ fontSize:".72rem", color:"#9a9488" }}>{g.label}</span>
                         </div>
-                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                          <div style={{ ...S.mono, fontSize:".72rem", color:filledCount===3?"#52b09a":"#5e5a52" }}>
-                            {filledCount}/3 已录入
-                          </div>
-                          <div style={{ width:36, height:4, background:"#08080a", borderRadius:2 }}>
-                            <div style={{ height:"100%", width:(filledCount/3*100)+"%", background:EC[g.el], borderRadius:2, transition:"width .4s" }}/>
-                          </div>
-                        </div>
+                        <span style={{ ...S.mono, fontSize:".6rem", color:filledCount===3?"#52b09a":"#3a3832" }}>
+                          {filledCount}/3
+                        </span>
                       </div>
 
-                      {/* Metric cards */}
-                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:0 }}>
-                        {g.keys.map((k, ki) => {
-                          const m = metrics.find(x=>x.key===k);
-                          const ref = gR(k, age, sex);
-                          if (!ref) return null;
-                          const hasVal = m?.value != null;
-                          const inR = hasVal && m.value >= ref.l && m.value <= ref.h;
-                          const isAnom = hasVal && (m.value < ref.l || m.value > ref.h);
-                          const pct = hasVal ? Math.min(100, Math.max(0, (m.value - ref.l) / (ref.h - ref.l) * 100)) : -1;
+                      {/* 3 metric slots — stacked */}
+                      {g.keys.map((k, ki) => {
+                        const m = metrics.find(x=>x.key===k);
+                        const ref = gR(k, age, sex);
+                        if (!ref) return null;
+                        const hasVal = m?.value != null;
+                        const inR = hasVal && m.value >= ref.l && m.value <= ref.h;
+                        const isAnom = hasVal && (m.value < ref.l || m.value > ref.h);
 
-                          return (
-                            <div key={k} style={{
-                              padding:"16px 18px",
-                              borderRight: ki < 2 ? `1px solid ${EC[g.el]}10` : "none",
-                              position:"relative",
-                              background: isAnom ? "rgba(196,64,64,0.03)" : "transparent",
-                            }}>
-                              {/* Name + code */}
-                              <div style={{ marginBottom:10 }}>
-                                <span style={{ fontSize:"1.05rem", color: hasVal ? "#e0dcd4" : "#3a3832", fontWeight: hasVal ? 400 : 300 }}>
-                                  {ref.cn}
-                                </span>
-                                <sup style={{ fontSize:".6rem", color:"#5e5a52", marginLeft:3, verticalAlign:"super", fontFamily:"'JetBrains Mono',monospace" }}>
-                                  {k.replace("_","-")}
-                                </sup>
-                              </div>
-
-                              {/* Value input + unit */}
-                              <div style={{ display:"flex", alignItems:"baseline", gap:6, marginBottom:10 }}>
-                                <input
-                                  type="number" step="0.1"
-                                  value={hasVal ? m.value : ""}
-                                  placeholder="待录入"
-                                  onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
-                                  style={{
-                                    width:90, background:"#0c0c0f", padding:"8px 10px", outline:"none", textAlign:"center",
-                                    ...S.mono, fontSize:"1.2rem", borderRadius:2,
-                                    color: !hasVal ? "#3a3832" : inR ? "#f0ece4" : "#c44040",
-                                    border: isAnom ? "1px solid rgba(196,64,64,0.4)" : "1px solid rgba(196,162,101,.1)",
-                                    animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
-                                  }}
-                                />
-                                <span style={{ fontSize:".78rem", color:"#5e5a52", fontFamily:"'JetBrains Mono',monospace" }}>{ref.u}</span>
-                              </div>
-
-                              {/* Status badge */}
-                              <div style={{ marginBottom:8 }}>
-                                {hasVal ? (
-                                  <span style={{
-                                    ...S.mono, fontSize:".72rem", padding:"2px 8px",
-                                    background: inR ? "rgba(82,176,154,.08)" : "rgba(196,64,64,.08)",
-                                    color: inR ? "#52b09a" : "#c44040",
-                                  }}>
-                                    {inR ? "正常" : m.value > ref.h ? "偏高 ↑" : "偏低 ↓"}
-                                  </span>
-                                ) : (
-                                  <span style={{ ...S.mono, fontSize:".72rem", color:"#2a2a2a" }}>— 待录入 —</span>
-                                )}
-                              </div>
-
-                              {/* Range bar */}
-                              <div style={{ height:4, background:"#08080a", borderRadius:2, marginBottom:6 }}>
-                                {hasVal && (
-                                  <div style={{
-                                    height:"100%", width: Math.min(100, Math.max(2, pct)) + "%",
-                                    background: inR ? "#52b09a" : "#c44040",
-                                    opacity:.6, transition:"width .4s", borderRadius:2,
-                                  }}/>
-                                )}
-                              </div>
-
-                              {/* Reference range + note */}
-                              <div style={{ fontSize:".75rem", color:"#3a3832", marginBottom:4 }}>
-                                参考 {ref.l} – {ref.h} {ref.u}
-                              </div>
-                              <div style={{ fontSize:".78rem", color:"#5e5a52", lineHeight:1.6 }}>
-                                {ref.n}
-                              </div>
+                        return (
+                          <div key={k} style={{
+                            padding:"5px 10px", display:"flex", alignItems:"center", gap:6,
+                            borderTop: ki > 0 ? `1px solid ${EC[g.el]}0a` : "none",
+                            background: isAnom ? "rgba(196,64,64,0.04)" : "transparent",
+                          }}>
+                            {/* Label */}
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <span style={{ fontSize:".78rem", color: hasVal ? "#d0ccc4" : "#3a3832" }}>
+                                {ref.cn}
+                              </span>
+                              <sup style={{ fontSize:".5rem", color:"#5e5a52", marginLeft:1, verticalAlign:"super", fontFamily:"'JetBrains Mono',monospace" }}>
+                                {k.replace("_","-")}
+                              </sup>
                             </div>
-                          );
+                            {/* Input */}
+                            <input
+                              type="number" step="0.1" inputMode="decimal"
+                              value={hasVal ? m.value : ""}
+                              placeholder="—"
+                              onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
+                              style={{
+                                width:62, background:"#0c0c0f", padding:"4px 4px", outline:"none", textAlign:"center",
+                                ...S.mono, fontSize:".82rem", borderRadius:2,
+                                color: !hasVal ? "#3a3832" : inR ? "#f0ece4" : "#c44040",
+                                border: isAnom ? "1px solid rgba(196,64,64,0.4)" : "1px solid rgba(196,162,101,.08)",
+                                animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
+                              }}
+                            />
+                            {/* Unit + status */}
+                            <div style={{ width:44, textAlign:"right" }}>
+                              <div style={{ ...S.mono, fontSize:".58rem", color:"#3a3832" }}>{ref.u}</div>
+                              {hasVal && (
+                                <div style={{ ...S.mono, fontSize:".55rem", color: inR ? "#52b09a" : "#c44040" }}>
+                                  {inR ? "正常" : m.value > ref.h ? "↑高" : "↓低"}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Range reference — collapsed */}
+                      <div style={{ padding:"4px 10px 6px", background:"rgba(0,0,0,.15)" }}>
+                        {g.keys.map(k => {
+                          const ref = gR(k, age, sex);
+                          return ref ? (
+                            <div key={k} style={{ fontSize:".55rem", color:"#2a2a2a", lineHeight:1.4 }}>
+                              {ref.cn} {ref.l}–{ref.h}
+                            </div>
+                          ) : null;
                         })}
                       </div>
                     </div>

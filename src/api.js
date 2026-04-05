@@ -1,8 +1,13 @@
 /**
- * AnatomySelf API Client — Vercel Edition
+ * AnatomySelf API Client — Vercel Edition v2
  * AI calls → /api/* serverless functions (keys on server)
- * Auth → localStorage (Vercel has no persistent server state)
+ * Auth → localStorage (primary) + /api/user-data (backend sync)
+ * Metrics → localStorage (instant) + backend UPSERT (durable)
  */
+
+// ═══════════════════════════════════════
+// AI API Calls
+// ═══════════════════════════════════════
 
 export async function apiOCR(file) {
   const base64 = await new Promise((resolve, reject) => {
@@ -49,6 +54,23 @@ export async function apiDestiny({ baziPillars, baziStr, dayMaster, dayMasterEle
   return resp.json();
 }
 
+export async function apiChat({ brain, question, context }) {
+  const resp = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ brain, question, context }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
+    throw new Error(err.error || '对话请求失败');
+  }
+  return resp.json();
+}
+
+// ═══════════════════════════════════════
+// Auth — localStorage based
+// ═══════════════════════════════════════
+
 export async function apiRegister(username, password) {
   const key = 'as_user_' + username.toLowerCase();
   if (localStorage.getItem(key)) return { error: '用户名已存在' };
@@ -68,24 +90,70 @@ export async function apiLogin(username, password) {
   return { success: true, userId: data.userId, username: data.username, data: data.appData || {} };
 }
 
+export function apiLogout() {
+  localStorage.removeItem('as_current_user');
+}
+
+// ═══════════════════════════════════════
+// User Data Persistence — dual write
+// ═══════════════════════════════════════
+
+/**
+ * Save user data: localStorage (instant) + backend UPSERT (durable)
+ * Supports incremental merge: only non-null metrics are written.
+ */
 export async function apiSaveUser(userId, appData) {
+  // 1. Write to localStorage immediately
   const ck = localStorage.getItem('as_current_user');
-  if (!ck) return;
-  const d = JSON.parse(localStorage.getItem(ck) || '{}');
-  d.appData = appData;
-  localStorage.setItem(ck, JSON.stringify(d));
+  if (ck) {
+    const d = JSON.parse(localStorage.getItem(ck) || '{}');
+    d.appData = appData;
+    localStorage.setItem(ck, JSON.stringify(d));
+  }
+
+  // 2. UPSERT to backend (fire-and-forget, catch errors silently)
+  try {
+    const metricsToSync = (appData.metrics || []).filter(m => m.value != null);
+    if (metricsToSync.length > 0 || appData.birthYear) {
+      await fetch('/api/user-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          metrics: metricsToSync,
+          profile: {
+            birthYear: appData.birthYear,
+            birthMonth: appData.birthMonth,
+            birthDay: appData.birthDay,
+            birthHour: appData.birthHour,
+            sex: appData.sex,
+          },
+        }),
+      });
+    }
+  } catch {
+    // Backend sync failure is non-critical
+  }
+
   return { success: true };
 }
 
-export async function apiChat({ brain, question, context }) {
-  const resp = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ brain, question, context }),
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
-    throw new Error(err.error || '对话请求失败');
+/**
+ * Load user data: try backend first, fall back to localStorage
+ */
+export async function apiLoadUser(userId) {
+  try {
+    const resp = await fetch(`/api/user-data?userId=${encodeURIComponent(userId)}`);
+    if (resp.ok) {
+      const result = await resp.json();
+      if (result.data) return result.data;
+    }
+  } catch {}
+
+  const ck = localStorage.getItem('as_current_user');
+  if (ck) {
+    const d = JSON.parse(localStorage.getItem(ck) || '{}');
+    return d.appData || null;
   }
-  return resp.json();
+  return null;
 }

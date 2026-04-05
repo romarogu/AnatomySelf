@@ -17,6 +17,9 @@
     },
     "api/chat.js": {
       "maxDuration": 120
+    },
+    "api/user-data.js": {
+      "maxDuration": 10
     }
   }
 }
