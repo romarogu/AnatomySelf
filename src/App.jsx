@@ -943,17 +943,17 @@ function Dashboard({ user, setUser, onLogout }) {
               </div>
 
               {/* Editable metrics — Bento 五行阵列 */}
-              <div style={{ ...S.card, marginTop:16, padding:"12px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <div style={{ ...S.card, marginTop:16, padding:"14px 16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                   <div style={S.label}>当前指标 · 五行标准化</div>
-                  <div style={{ ...S.mono, fontSize:".65rem", color:metrics.filter(m=>m.value!=null).length===15?"#52b09a":"#5e5a52" }}>
+                  <div style={{ ...S.mono, fontSize:".75rem", color:metrics.filter(m=>m.value!=null).length===15?"#52b09a":"#5e5a52" }}>
                     {metrics.filter(m=>m.value!=null).length}/15
                   </div>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(5, minmax(0, 180px))", gap:8, justifyContent:"center" }}>
                   {WX_GROUPS.map(g => (
-                    <div key={g.el} style={{ background:"rgba(0,0,0,.2)", borderTop:`2px solid ${EC[g.el]}`, padding:"6px" }}>
-                      <div style={{ fontSize:".65rem", color:EC[g.el], marginBottom:4, textAlign:"center" }}>{g.el}·{g.label.slice(0,2)}</div>
+                    <div key={g.el} style={{ background:"rgba(0,0,0,.25)", borderTop:`2px solid ${EC[g.el]}`, padding:"8px 10px" }}>
+                      <div style={{ fontSize:".82rem", color:EC[g.el], marginBottom:6, textAlign:"center", fontWeight:500 }}>{g.el} · {g.label}</div>
                       {g.keys.map(k => {
                         const m = metrics.find(x=>x.key===k);
                         const ref = gR(k,age,sex);
@@ -961,23 +961,27 @@ function Dashboard({ user, setUser, onLogout }) {
                         const inRange = hasVal && ref && m.value>=ref.l && m.value<=ref.h;
                         const isAnom = hasVal && ref && (m.value<ref.l || m.value>ref.h);
                         return (
-                          <div key={k} style={{ marginBottom:3 }}>
-                            <div style={{ fontSize:".6rem", color: hasVal?"#9a9488":"#2a2a2a", lineHeight:1.2 }}>
-                              {ref?.cn?.slice(0,4)||k}<sup style={{ fontSize:".42rem", color:"#3a3832" }}>{k.replace("_","-")}</sup>
+                          <div key={k} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:5, padding:"3px 0" }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <span style={{ fontSize:".82rem", color: hasVal ? "#d0ccc4" : "#6a6560" }}>
+                                {ref?.cn||k}
+                              </span>
+                              <sup style={{ fontSize:".55rem", color:"#5e5a52", marginLeft:2 }}>{k.replace("_","-")}</sup>
                             </div>
                             <input
                               type="number" step="0.1" inputMode="decimal"
                               value={hasVal ? m.value : ""}
-                              placeholder="—"
+                              placeholder="待录入"
                               onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
                               style={{
-                                width:"100%", background:"#0c0c0f", padding:"3px 2px", outline:"none", textAlign:"center",
-                                ...S.mono, fontSize:".75rem", borderRadius:1,
-                                color: !hasVal ? "#2a2a2a" : inRange ? "#f0ece4" : "#c44040",
-                                border: isAnom ? "1px solid rgba(196,64,64,0.4)" : "1px solid rgba(196,162,101,.06)",
+                                width:72, background:"#0c0c0f", padding:"5px 4px", outline:"none", textAlign:"center",
+                                ...S.mono, fontSize:".88rem", borderRadius:2,
+                                color: !hasVal ? "#6a6560" : inRange ? "#f0ece4" : "#c44040",
+                                border: isAnom ? "1px solid rgba(196,64,64,0.5)" : "1px solid rgba(196,162,101,.12)",
                                 animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
                               }}
                             />
+                            <span style={{ ...S.mono, fontSize:".65rem", color:"#5e5a52", width:32, textAlign:"right" }}>{ref?.u}</span>
                           </div>
                         );
                       })}
@@ -1394,36 +1398,35 @@ function Dashboard({ user, setUser, onLogout }) {
           {/* ══ METRICS — Bento 五行阵列 ══ */}
           {tab==="metrics" && (
             <div>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                <div style={{ fontSize:".85rem", color:"#9a9488" }}>{age}岁 · {sex==="M"?"男":"女"}性 — 参考范围已按人口统计学调整</div>
-                <div style={{ ...S.mono, fontSize:".7rem", color:"#3a3832" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                <div style={{ fontSize:".9rem", color:"#9a9488" }}>{age}岁 · {sex==="M"?"男":"女"}性 — 参考范围已按人口统计学调整</div>
+                <div style={{ ...S.mono, fontSize:".78rem", color:metrics.filter(m=>m.value!=null).length===15?"#52b09a":"#5e5a52" }}>
                   {metrics.filter(m=>m.value!=null).length}/15 已录入
                 </div>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-                {WX_GROUPS.map((g, gi) => {
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(5, minmax(0, 200px))", gap:10, justifyContent:"center" }}>
+                {WX_GROUPS.map(g => {
                   const filledCount = g.keys.filter(k => metrics.find(m=>m.key===k)?.value != null).length;
                   return (
                     <div key={g.el} style={{
                       ...S.card, padding:0, overflow:"hidden",
                       borderTop:`3px solid ${EC[g.el]}`,
-                      gridColumn: gi >= 3 ? "span 1" : undefined,
                     }}>
-                      {/* Group header — compact */}
+                      {/* Group header */}
                       <div style={{
-                        padding:"6px 10px", display:"flex", justifyContent:"space-between", alignItems:"center",
-                        background:`linear-gradient(135deg, ${EC[g.el]}0a, transparent)`,
+                        padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center",
+                        background:`linear-gradient(135deg, ${EC[g.el]}0c, transparent)`,
                       }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                          <span style={{ fontSize:"1rem", color:EC[g.el], fontWeight:600 }}>{g.el}</span>
-                          <span style={{ fontSize:".72rem", color:"#9a9488" }}>{g.label}</span>
+                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                          <span style={{ fontSize:"1.1rem", color:EC[g.el], fontWeight:600 }}>{g.el}</span>
+                          <span style={{ fontSize:".82rem", color:"#9a9488" }}>{g.label}</span>
                         </div>
-                        <span style={{ ...S.mono, fontSize:".6rem", color:filledCount===3?"#52b09a":"#3a3832" }}>
+                        <span style={{ ...S.mono, fontSize:".72rem", color:filledCount===3?"#52b09a":"#5e5a52" }}>
                           {filledCount}/3
                         </span>
                       </div>
 
-                      {/* 3 metric slots — stacked */}
+                      {/* 3 metric slots */}
                       {g.keys.map((k, ki) => {
                         const m = metrics.find(x=>x.key===k);
                         const ref = gR(k, age, sex);
@@ -1434,16 +1437,16 @@ function Dashboard({ user, setUser, onLogout }) {
 
                         return (
                           <div key={k} style={{
-                            padding:"5px 10px", display:"flex", alignItems:"center", gap:6,
-                            borderTop: ki > 0 ? `1px solid ${EC[g.el]}0a` : "none",
-                            background: isAnom ? "rgba(196,64,64,0.04)" : "transparent",
+                            padding:"7px 12px", display:"flex", alignItems:"center", gap:8,
+                            borderTop: ki > 0 ? `1px solid ${EC[g.el]}12` : "none",
+                            background: isAnom ? "rgba(196,64,64,0.05)" : "transparent",
                           }}>
                             {/* Label */}
                             <div style={{ flex:1, minWidth:0 }}>
-                              <span style={{ fontSize:".78rem", color: hasVal ? "#d0ccc4" : "#3a3832" }}>
+                              <span style={{ fontSize:".88rem", color: hasVal ? "#d0ccc4" : "#6a6560" }}>
                                 {ref.cn}
                               </span>
-                              <sup style={{ fontSize:".5rem", color:"#5e5a52", marginLeft:1, verticalAlign:"super", fontFamily:"'JetBrains Mono',monospace" }}>
+                              <sup style={{ fontSize:".58rem", color:"#5e5a52", marginLeft:2, verticalAlign:"super", fontFamily:"'JetBrains Mono',monospace" }}>
                                 {k.replace("_","-")}
                               </sup>
                             </div>
@@ -1451,22 +1454,22 @@ function Dashboard({ user, setUser, onLogout }) {
                             <input
                               type="number" step="0.1" inputMode="decimal"
                               value={hasVal ? m.value : ""}
-                              placeholder="—"
+                              placeholder="待录入"
                               onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
                               style={{
-                                width:62, background:"#0c0c0f", padding:"4px 4px", outline:"none", textAlign:"center",
-                                ...S.mono, fontSize:".82rem", borderRadius:2,
-                                color: !hasVal ? "#3a3832" : inR ? "#f0ece4" : "#c44040",
-                                border: isAnom ? "1px solid rgba(196,64,64,0.4)" : "1px solid rgba(196,162,101,.08)",
+                                width:68, background:"#0c0c0f", padding:"5px 4px", outline:"none", textAlign:"center",
+                                ...S.mono, fontSize:".9rem", borderRadius:2,
+                                color: !hasVal ? "#6a6560" : inR ? "#f0ece4" : "#c44040",
+                                border: isAnom ? "1px solid rgba(196,64,64,0.5)" : "1px solid rgba(196,162,101,.12)",
                                 animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
                               }}
                             />
                             {/* Unit + status */}
-                            <div style={{ width:44, textAlign:"right" }}>
-                              <div style={{ ...S.mono, fontSize:".58rem", color:"#3a3832" }}>{ref.u}</div>
+                            <div style={{ width:48, textAlign:"right" }}>
+                              <div style={{ ...S.mono, fontSize:".68rem", color:"#5e5a52" }}>{ref.u}</div>
                               {hasVal && (
-                                <div style={{ ...S.mono, fontSize:".55rem", color: inR ? "#52b09a" : "#c44040" }}>
-                                  {inR ? "正常" : m.value > ref.h ? "↑高" : "↓低"}
+                                <div style={{ ...S.mono, fontSize:".65rem", color: inR ? "#52b09a" : "#c44040" }}>
+                                  {inR ? "正常" : m.value > ref.h ? "偏高↑" : "偏低↓"}
                                 </div>
                               )}
                             </div>
@@ -1474,13 +1477,13 @@ function Dashboard({ user, setUser, onLogout }) {
                         );
                       })}
 
-                      {/* Range reference — collapsed */}
-                      <div style={{ padding:"4px 10px 6px", background:"rgba(0,0,0,.15)" }}>
+                      {/* Range reference */}
+                      <div style={{ padding:"5px 12px 7px", background:"rgba(0,0,0,.2)" }}>
                         {g.keys.map(k => {
                           const ref = gR(k, age, sex);
                           return ref ? (
-                            <div key={k} style={{ fontSize:".55rem", color:"#2a2a2a", lineHeight:1.4 }}>
-                              {ref.cn} {ref.l}–{ref.h}
+                            <div key={k} style={{ fontSize:".68rem", color:"#4a4a44", lineHeight:1.5 }}>
+                              {ref.cn} {ref.l}–{ref.h} {ref.u}
                             </div>
                           ) : null;
                         })}
