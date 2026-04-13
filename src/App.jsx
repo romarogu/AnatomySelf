@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import * as d3 from "d3";
 import { useI18n } from "./i18n/index.jsx";
 import { generateLifeBlueprintPDF, generateWeeklyGuidePDF } from "./ReportGenerator.jsx";
+import LandingPage from "./LandingPage.jsx";
 import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiLogout, apiSaveUser, apiChat } from "./api.js";
 
 // ════════════════════════════════════════
@@ -498,7 +499,7 @@ const INIT_M = [
 // ════════════════════════════════════════
 // LOGIN / REGISTER SCREEN
 // ════════════════════════════════════════
-function AuthScreen({ onLogin }) {
+function AuthScreen({ onLogin, onBack }) {
   const { t, locale, toggleLang } = useI18n();
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
@@ -526,11 +527,12 @@ function AuthScreen({ onLogin }) {
     <div style={{ minHeight:"100vh", background:"#08080a", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Noto Serif SC',serif",
       backgroundImage:"linear-gradient(rgba(196,162,101,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(196,162,101,.015) 1px,transparent 1px)", backgroundSize:"60px 60px" }}>
       <div style={{ width:420, padding:48, background:"#0f1014", border:"1px solid rgba(196,162,101,0.1)" }}>
-        {/* Language toggle */}
-        <div style={{ textAlign:"right", marginBottom:12 }}>
-          <button onClick={toggleLang} style={{ background:"transparent", border:"1px solid rgba(196,162,101,.15)", color:"#5e5a52", padding:"3px 10px", fontSize:".72rem", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace", borderRadius:2 }}>
+        {/* Top bar: back + language */}
+        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+          {onBack ? <button onClick={onBack} style={{ background:"none", border:"none", color:"#5e5a52", fontFamily:"'JetBrains Mono',monospace", fontSize:".72rem", cursor:"pointer" }}>← {locale==='en'?'Back':'返回'}</button> : <span/>}
+          <span onClick={toggleLang} style={{ cursor:"pointer", fontSize:".72rem", color:"#5e5a52", fontFamily:"'JetBrains Mono',monospace" }}>
             {locale === 'en' ? '中文' : 'EN'}
-          </button>
+          </span>
         </div>
         {/* Logo */}
         <div style={{ textAlign:"center", marginBottom:36 }}>
@@ -736,17 +738,18 @@ function BirthSetup({ user, onSave }) {
 }
 
 // ════════════════════════════════════════
-// MAIN DASHBOARD
+// MAIN APP ROUTER
 // ════════════════════════════════════════
 export default function App() {
   const [user, setUser] = useState(null);
   const [setupDone, setSetupDone] = useState(false);
   const [ready, setReady] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => { setTimeout(()=>setReady(true), 100); }, []);
 
   // Auth handlers
-  const handleLogin = useCallback((userData) => { setUser(userData); setSetupDone(!!userData.setupComplete); }, []);
+  const handleLogin = useCallback((userData) => { setUser(userData); setSetupDone(!!userData.setupComplete); setShowAuth(false); }, []);
 
   const handleBirthSave = useCallback(async (birthData) => {
     const updated = { ...user, ...birthData, setupComplete: true };
@@ -762,7 +765,8 @@ export default function App() {
   const handleLogout = useCallback(() => { apiLogout(); setUser(null); setSetupDone(false); }, []);
 
   // Show auth screen
-  if (!user) return <AuthScreen onLogin={handleLogin} />;
+  if (!user && !showAuth) return <LandingPage onEnter={() => setShowAuth(true)} />;
+  if (!user) return <AuthScreen onLogin={handleLogin} onBack={() => setShowAuth(false)} />;
   if (!setupDone) return <BirthSetup user={user} onSave={handleBirthSave} />;
 
   return <Dashboard user={user} setUser={setUser} onLogout={handleLogout} />;
