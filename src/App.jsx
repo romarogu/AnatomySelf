@@ -706,6 +706,10 @@ function Dashboard({ user, setUser, onLogout }) {
   const [tab, setTab] = useState("upload");
   const [pipe, setPipe] = useState([{lb:"Upload",st:"idle"},{lb:"OCR",st:"idle"},{lb:"Science",st:"idle"},{lb:"Meta",st:"idle"}]);
   const fileRef = useRef(null);
+  // Analysis ceremony state
+  const [analysisActive, setAnalysisActive] = useState(false);
+  const [analysisPhase, setAnalysisPhase] = useState(-1);
+  const analysisTimerRef = useRef(null);
   // Chat state
   const [chatBrain, setChatBrain] = useState("science"); // "science" or "destiny"
   const [chatInput, setChatInput] = useState("");
@@ -1068,6 +1072,57 @@ ${days.map(d => `<div class="day">
     URL.revokeObjectURL(url);
   }, [bazi, dy, targetLN]);
 
+  // Analysis ceremony phases
+  const analysisPhases = useMemo(() => {
+    const yr = bazi.year[0]+bazi.year[1];
+    const filled = metrics.filter(m=>m.value!=null).length;
+    return locale === 'en' ? [
+      { t:0, msg:`Normalizing ${filled} clinical biomarkers...`, icon:"◎" },
+      { t:3000, msg:`Mapping ${by} ${bazi.dme}-element energetic blueprint...`, icon:"☯" },
+      { t:6000, msg:"BioSelf: Analyzing cardiovascular & metabolic risks...", icon:"🔬" },
+      { t:12000, msg:`MetaSelf: Calculating ${bazi.dme} resonance for ${targetLN.lbl} year...`, icon:"⟡" },
+      { t:20000, msg:"Dual-Brain engine debating your results...", icon:"⚡" },
+      { t:30000, msg:"Synthesizing personalized recommendations...", icon:"◉" },
+    ] : [
+      { t:0, msg:`正在标准化 ${filled} 项临床指标...`, icon:"◎" },
+      { t:3000, msg:`映射 ${yr} ${bazi.dme}行能量蓝图...`, icon:"☯" },
+      { t:6000, msg:"科学脑：分析心血管与代谢风险...", icon:"🔬" },
+      { t:12000, msg:`命理脑：推演${bazi.dme}行在${targetLN.lbl}年的共振...`, icon:"⟡" },
+      { t:20000, msg:"双脑引擎正在交叉辩证...", icon:"⚡" },
+      { t:30000, msg:"生成个性化建议中...", icon:"◉" },
+    ];
+  }, [locale, bazi, by, metrics, targetLN]);
+
+  const startAnalysisCeremony = useCallback(async () => {
+    setAnalysisActive(true);
+    setAnalysisPhase(0);
+    // Progress through phases on timers
+    const timers = [];
+    analysisPhases.forEach((p, i) => {
+      if (i > 0) timers.push(setTimeout(() => setAnalysisPhase(i), p.t));
+    });
+    analysisTimerRef.current = timers;
+    // Actually run the analysis
+    setPipe(p=>p.map((s,i)=>i>=2?{...s,st:"idle"}:s));
+    setDst(null);
+    await doSci();
+  }, [analysisPhases, doSci]);
+
+  // End ceremony when both brains complete
+  useEffect(() => {
+    if (analysisActive && sci && dst && !sciL && !dstL) {
+      // Both done — show final phase briefly then close
+      setAnalysisPhase(analysisPhases.length - 1);
+      const t = setTimeout(() => {
+        setAnalysisActive(false);
+        setAnalysisPhase(-1);
+        if (analysisTimerRef.current) analysisTimerRef.current.forEach(clearTimeout);
+        setTab("radar"); // Auto-navigate to results
+      }, 1500);
+      return () => clearTimeout(t);
+    }
+  }, [analysisActive, sci, dst, sciL, dstL, analysisPhases]);
+
   const tabs = [
     { id: "upload", lb: "📄 " + t('nav.dataCenter') },
     { id: "radar", lb: "⚡ " + t('nav.collisionAnalysis') },
@@ -1079,6 +1134,83 @@ ${days.map(d => `<div class="day">
   return (
     <div style={{ minHeight:"100vh", background:"#08080a", color:"#e0dcd4", fontFamily:"'Noto Serif SC',serif", fontSize:"14px",
       backgroundImage:"linear-gradient(rgba(196,162,101,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(196,162,101,.015) 1px,transparent 1px)", backgroundSize:"60px 60px" }}>
+
+      {/* ANALYSIS CEREMONY OVERLAY */}
+      {analysisActive && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:100,
+          background:"rgba(8,8,10,0.92)", backdropFilter:"blur(16px)",
+          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+          animation:"fadeIn .4s ease-out",
+        }}>
+          {/* Dual-brain collision animation */}
+          <div style={{ position:"relative", width:200, height:120, marginBottom:32 }}>
+            {/* Science orb — left */}
+            <div style={{
+              position:"absolute", left: analysisPhase >= 4 ? 60 : 20, top:20,
+              width:60, height:60, borderRadius:"50%",
+              background:"radial-gradient(circle, rgba(82,176,154,0.15), rgba(82,176,154,0.03))",
+              border:"1px solid rgba(82,176,154,0.2)",
+              transition:"left 8s ease-in-out",
+              animation:"breathe 3s ease-in-out infinite",
+            }}>
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:".7rem", color:"#52b09a", fontFamily:"'JetBrains Mono',monospace" }}>BIO</div>
+            </div>
+            {/* Meta orb — right */}
+            <div style={{
+              position:"absolute", right: analysisPhase >= 4 ? 60 : 20, top:20,
+              width:60, height:60, borderRadius:"50%",
+              background:"radial-gradient(circle, rgba(196,162,101,0.15), rgba(196,162,101,0.03))",
+              border:"1px solid rgba(196,162,101,0.2)",
+              transition:"right 8s ease-in-out",
+              animation:"breathe 3s ease-in-out infinite 1.5s",
+            }}>
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:".7rem", color:"#c4a265", fontFamily:"'JetBrains Mono',monospace" }}>META</div>
+            </div>
+            {/* Collision spark — center */}
+            {analysisPhase >= 4 && (
+              <div style={{
+                position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%)",
+                width:8, height:8, borderRadius:"50%", background:"#e0dcd4",
+                boxShadow:"0 0 20px rgba(224,220,212,0.4), 0 0 40px rgba(196,162,101,0.2)",
+                animation:"pulse 1.5s ease-in-out infinite",
+              }}/>
+            )}
+          </div>
+
+          {/* Phase status — typewriter */}
+          <div style={{ textAlign:"center", maxWidth:500 }}>
+            <div style={{ ...S.mono, fontSize:".7rem", color:"#3a3832", letterSpacing:".2em", marginBottom:12 }}>
+              {locale === 'en' ? 'DUAL-BRAIN ANALYSIS' : '双脑对撞分析'}
+            </div>
+            {analysisPhases.slice(0, analysisPhase + 1).map((p, i) => (
+              <div key={i} style={{
+                fontSize:".82rem", color: i === analysisPhase ? "#e0dcd4" : "#3a3832",
+                marginBottom:6, transition:"color .5s",
+                fontFamily:"'JetBrains Mono',monospace",
+                animation: i === analysisPhase ? "fadeIn .5s ease-out" : "none",
+              }}>
+                <span style={{ color: i === analysisPhase ? "#c4a265" : "#2a2a2a", marginRight:8 }}>{p.icon}</span>
+                {p.msg}
+              </div>
+            ))}
+          </div>
+
+          {/* Breathing indicator */}
+          <div style={{ marginTop:24, width:120, height:2, background:"#16161c", borderRadius:1, overflow:"hidden" }}>
+            <div style={{
+              height:"100%", width:"30%", background:"linear-gradient(90deg, #52b09a, #c4a265)",
+              borderRadius:1, animation:"shimmer 2s ease-in-out infinite",
+            }}/>
+          </div>
+
+          <div style={{ marginTop:16, fontSize:".72rem", color:"#3a3832", fontStyle:"italic", fontFamily:"'Cormorant Garamond',serif" }}>
+            {locale === 'en'
+              ? 'Our Dual-Brain engine is debating your results. This takes 30-60 seconds for deep precision.'
+              : '双脑引擎正在交叉辩证，深度精准分析需要 30-60 秒。'}
+          </div>
+        </div>
+      )}
 
       {/* HEADER */}
       <div style={{ padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid rgba(196,162,101,.08)", background:"rgba(8,8,10,.92)", backdropFilter:"blur(12px)", position:"sticky", top:0, zIndex:50 }}>
@@ -1228,9 +1360,9 @@ ${days.map(d => `<div class="day">
               </div>
 
               <div style={{ marginTop:16, display:"flex", gap:12, alignItems:"center" }}>
-                <button onClick={async()=>{setPipe(p=>p.map((s,i)=>i>=2?{...s,st:"idle"}:s));setDst(null);await doSci();}} disabled={sciL||dstL}
-                  style={{ ...S.btn, opacity:sciL||dstL?.5:1, cursor:sciL||dstL?"wait":"pointer" }}>
-                  {sciL?"⏳ "+t('upload.sciRunning'):dstL?"⏳ "+t('upload.dstRunning'):"⚡ "+t('upload.launchBtn')}
+                <button onClick={startAnalysisCeremony} disabled={sciL||dstL||analysisActive}
+                  style={{ ...S.btn, opacity:sciL||dstL||analysisActive?.5:1, cursor:sciL||dstL||analysisActive?"wait":"pointer" }}>
+                  {analysisActive?"⏳ "+t('upload.sciRunning'):"⚡ "+t('upload.launchBtn')}
                 </button>
                 <span style={{ fontSize:".85rem", color:"#5e5a52" }}>
                   {metrics.filter(m=>m.value!=null).length} {t('upload.itemsFilled')}
@@ -1898,6 +2030,12 @@ ${days.map(d => `<div class="day">
         @keyframes breathe {
           0%,100% { border-color: rgba(196,64,64,0.2); box-shadow: 0 0 0 0 rgba(196,64,64,0); }
           50% { border-color: rgba(196,64,64,0.6); box-shadow: 0 0 8px 2px rgba(196,64,64,0.15); }
+        }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes shimmer {
+          0% { transform:translateX(-100%); }
+          50% { transform:translateX(250%); }
+          100% { transform:translateX(-100%); }
         }
         * { box-sizing:border-box; margin:0; padding:0; }
         ::-webkit-scrollbar { width:4px; }
