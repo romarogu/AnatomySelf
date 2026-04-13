@@ -1700,72 +1700,130 @@ ${days.map(d => `<div class="day">
                     </>
                   );
                 })() : (
-                  /* No dimension selected — show overview */
+                  /* No dimension selected — 3-tier overview */
                   <>
-                    {/* Summary cards */}
-                    <div style={{ ...S.card, borderColor:"rgba(196,162,101,.06)" }}>
-                      <div style={{ fontSize:"1rem", color:"#e0dcd4", marginBottom:12 }}>{t('analysis.selectDimPrompt')}</div>
-                      <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.8 }}>
-                        {t('analysis.selectDimDesc')}
+                    {/* TIER 1: TOP SENTINEL — one-line core contradiction */}
+                    {sci?.summary && (
+                      <div style={{ ...S.card, borderLeft:"3px solid #c44040", padding:"14px 18px" }}>
+                        <div style={{ ...S.mono, fontSize:".62rem", color:"#c44040", letterSpacing:".2em", marginBottom:6 }}>TOP SENTINEL</div>
+                        <div style={{ fontSize:".92rem", color:"#e0dcd4", lineHeight:1.7, fontWeight:400 }}>{sci.summary}</div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Quick overview of all science + destiny findings */}
+                    {/* TIER 2: IMPACT CARDS — side-by-side collision per system */}
                     {(sci?.items?.length > 0 || dst?.collision_items?.length > 0) && (
-                      <div style={{ ...S.card }}>
-                        <div style={S.label}>{t('analysis.globalOverview')}</div>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:8 }}>
-                          <div>
-                            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
-                              <div style={{ width:6, height:6, borderRadius:"50%", background:"#52b09a" }}/>
-                              <span style={{ ...S.mono, fontSize:".75rem", color:"#52b09a" }}>{t('analysis.sciFindings')}</span>
-                            </div>
-                            {sci?.items?.length ? sci.items.map((it,i) => (
-                              <div key={i} onClick={() => setSelectedDim(it.organ_system)} style={{
-                                padding:"6px 10px", background:"#16161c", borderLeft:`2px solid ${EC[it.organ_system]||"#52b09a"}`,
-                                marginBottom:4, cursor:"pointer", transition:"background .2s"
-                              }}>
-                                <span style={{ fontSize:".85rem", color:"#e0dcd4" }}>{it.metric ? mName(it.metric) : it.metric_cn}</span>
-                                <span style={{ fontSize:".75rem", color:"#5e5a52", marginLeft:6 }}>{sysLabel(it.organ_system)}</span>
+                      <div style={{ ...S.card, padding:"14px 16px" }}>
+                        <div style={{ ...S.mono, fontSize:".62rem", color:"#6a5a35", letterSpacing:".2em", marginBottom:12 }}>IMPACT ANALYSIS</div>
+                        {["木","火","土","金","水"].map(el => {
+                          const sciItem = sci?.items?.find(it => it.organ_system === el);
+                          const dstItem = dst?.collision_items?.find(it => it.organ_wuxing === el);
+                          if (!sciItem && !dstItem) return null;
+                          const isCritical = sciItem?.severity === "severe" || sciItem?.severity === "critical";
+                          return (
+                            <div key={el} onClick={() => setSelectedDim(el)} style={{
+                              display:"grid", gridTemplateColumns:"1fr 1fr", gap:0,
+                              marginBottom:8, cursor:"pointer",
+                              border: isCritical ? "1px solid rgba(196,64,64,0.3)" : "1px solid rgba(196,162,101,0.06)",
+                              animation: isCritical ? "breathe 2s ease-in-out infinite" : "none",
+                              background:"#16161c",
+                            }}>
+                              {/* Science side */}
+                              <div style={{ padding:"10px 12px", borderRight:"1px solid rgba(196,162,101,0.06)" }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:6 }}>
+                                  <div style={{ width:5, height:5, borderRadius:"50%", background:"#52b09a" }}/>
+                                  <span style={{ ...S.mono, fontSize:".62rem", color:"#52b09a" }}>CLINICAL</span>
+                                  <span style={{ fontSize:".78rem", color:EC[el], marginLeft:"auto" }}>{sysLabel(el)}</span>
+                                </div>
+                                {sciItem ? (
+                                  <>
+                                    <div style={{ fontSize:".82rem", color: isCritical ? "#c44040" : "#d0ccc4", lineHeight:1.6, fontWeight: isCritical ? 600 : 400 }}>
+                                      {sciItem.metric ? mName(sciItem.metric) : sciItem.metric_cn}
+                                      {sciItem.severity && <span style={{ ...S.mono, fontSize:".58rem", color: isCritical?"#c44040":"#d4a840", marginLeft:6, textTransform:"uppercase" }}>{sciItem.severity}</span>}
+                                    </div>
+                                    <div style={{ fontSize:".75rem", color:"#9a9488", lineHeight:1.5, marginTop:4 }}>{sciItem.physiological_analysis}</div>
+                                  </>
+                                ) : <div style={{ fontSize:".72rem", color:"#3a3832" }}>—</div>}
                               </div>
-                            )) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>{t('analysis.noData')}</div>}
+                              {/* Meta side */}
+                              <div style={{ padding:"10px 12px" }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:6 }}>
+                                  <div style={{ width:5, height:5, borderRadius:"50%", background:"#c4a265" }}/>
+                                  <span style={{ ...S.mono, fontSize:".62rem", color:"#c4a265" }}>ENERGETIC</span>
+                                </div>
+                                {dstItem ? (
+                                  <>
+                                    <div style={{ fontSize:".75rem", color:"#d0ccc4", lineHeight:1.5 }}>{dstItem.current_forces}</div>
+                                    {dstItem.risk_window && <div style={{ fontSize:".68rem", color:"#d4a840", marginTop:3 }}>⚡ {dstItem.risk_window}</div>}
+                                  </>
+                                ) : <div style={{ fontSize:".72rem", color:"#3a3832" }}>—</div>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* TIER 3: ACTION PROTOCOL — bullet points only */}
+                    {dst?.life_tuning && (
+                      <div style={{ ...S.card, padding:"14px 16px" }}>
+                        <div style={{ ...S.mono, fontSize:".62rem", color:"#52b09a", letterSpacing:".2em", marginBottom:10 }}>ACTION PROTOCOL</div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                          <div>
+                            <div style={{ ...S.mono, fontSize:".6rem", color:"#52b09a", marginBottom:6 }}>CLINICAL</div>
+                            {(dst.life_tuning.medical_advice || []).map((a,i) => (
+                              <div key={i} style={{ fontSize:".78rem", color:"#d0ccc4", lineHeight:1.5, marginBottom:4, paddingLeft:10, borderLeft:"2px solid rgba(82,176,154,0.2)" }}>
+                                {a}
+                              </div>
+                            ))}
                           </div>
                           <div>
-                            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
-                              <div style={{ width:6, height:6, borderRadius:"50%", background:"#c4a265" }}/>
-                              <span style={{ ...S.mono, fontSize:".75rem", color:"#c4a265" }}>{t('analysis.metaFindings')}</span>
-                            </div>
-                            {dst?.collision_items?.length ? dst.collision_items.map((it,i) => (
-                              <div key={i} onClick={() => setSelectedDim(it.organ_wuxing)} style={{
-                                padding:"6px 10px", background:"#16161c", borderLeft:`2px solid ${EC[it.organ_wuxing]||"#c4a265"}`,
-                                marginBottom:4, cursor:"pointer", transition:"background .2s"
-                              }}>
-                                <span style={{ fontSize:".85rem", color:"#e0dcd4" }}>{it.organ_wuxing} {sysOrgan(it.organ_wuxing)}</span>
-                                {it.risk_window && <span style={{ fontSize:".72rem", color:"#d4a840", marginLeft:6 }}>{it.risk_window}</span>}
+                            <div style={{ ...S.mono, fontSize:".6rem", color:"#c4a265", marginBottom:6 }}>ENERGETIC</div>
+                            {(dst.life_tuning.destiny_advice || []).map((a,i) => (
+                              <div key={i} style={{ fontSize:".78rem", color:"#d0ccc4", lineHeight:1.5, marginBottom:4, paddingLeft:10, borderLeft:"2px solid rgba(196,162,101,0.2)" }}>
+                                {a}
                               </div>
-                            )) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>{t('analysis.noData')}</div>}
+                            ))}
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {sci?.summary && (
-                      <div style={{ ...S.card, borderColor:"rgba(82,176,154,.08)" }}>
-                        <div style={{ ...S.mono, fontSize:".72rem", color:"#52b09a", marginBottom:6 }}>{t('analysis.sciSummary')}</div>
-                        <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.7 }}>{sci.summary}</div>
-                      </div>
-                    )}
+                    {/* TEMPORAL OUTLOOK */}
                     {dst?.temporal_outlook && (
-                      <div style={{ ...S.card, borderColor:"rgba(196,162,101,.08)" }}>
-                        <div style={{ ...S.mono, fontSize:".72rem", color:"#6a5a35", marginBottom:6 }}>TEMPORAL OUTLOOK</div>
-                        <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.7 }}>{dst.temporal_outlook}</div>
+                      <div style={{ ...S.card, borderColor:"rgba(196,162,101,.08)", padding:"14px 16px" }}>
+                        <div style={{ ...S.mono, fontSize:".62rem", color:"#6a5a35", letterSpacing:".2em", marginBottom:6 }}>TEMPORAL OUTLOOK</div>
+                        <div style={{ fontSize:".82rem", color:"#9a9488", lineHeight:1.7 }}>{dst.temporal_outlook}</div>
                       </div>
                     )}
+
+                    {/* KEY DATES */}
                     {dst?.key_dates?.length > 0 && (
-                      <div style={{ ...S.card }}>
-                        <div style={S.label}>{t('analysis.keyDates')}</div>
-                        {dst.key_dates.map((d,i) => <div key={i} style={{ fontSize:".85rem", color:"#d4a840", marginBottom:4 }}>📅 {d}</div>)}
+                      <div style={{ ...S.card, padding:"14px 16px" }}>
+                        <div style={{ ...S.mono, fontSize:".62rem", color:"#d4a840", letterSpacing:".2em", marginBottom:8 }}>KEY TEMPORAL NODES</div>
+                        {dst.key_dates.map((d,i) => <div key={i} style={{ fontSize:".78rem", color:"#d4a840", marginBottom:4, lineHeight:1.5 }}>◆ {d}</div>)}
                       </div>
+                    )}
+
+                    {/* BaZi methodology — collapsed */}
+                    {dst?.bazi_analysis && (
+                      <details style={{ ...S.card, padding:"14px 16px", cursor:"pointer" }}>
+                        <summary style={{ ...S.mono, fontSize:".62rem", color:"#3a3832", letterSpacing:".2em", listStyle:"none" }}>
+                          ▸ {locale==='en' ? 'VIEW METHODOLOGY · BaZi Deep Analysis' : '展开方法论 · 八字详析'}
+                        </summary>
+                        <div style={{ marginTop:10 }}>
+                          {[
+                            ["📋", "pillars", locale==='en'?"Pillars":"四柱"],
+                            ["📐", "pattern", locale==='en'?"Pattern":"格局"],
+                            ["🏥", "health_map", locale==='en'?"Health Map":"健康"],
+                            ["📋", "pillars_detail", locale==='en'?"Pillars":"四柱"],
+                            ["⭐", "shenshas", locale==='en'?"Stars":"神煞"],
+                          ].map(([icon, key, label]) => dst.bazi_analysis[key] ? (
+                            <div key={key} style={{ fontSize:".75rem", color:"#5e5a52", lineHeight:1.5, marginBottom:4, padding:"4px 8px", background:"rgba(196,162,101,.02)" }}>
+                              <span style={{ color:"#3a3832" }}>{icon} {label}:</span> {dst.bazi_analysis[key]}
+                            </div>
+                          ) : null)}
+                        </div>
+                      </details>
                     )}
                   </>
                 )}
