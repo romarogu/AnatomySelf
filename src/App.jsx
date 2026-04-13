@@ -1135,79 +1135,95 @@ ${days.map(d => `<div class="day">
     <div style={{ minHeight:"100vh", background:"#08080a", color:"#e0dcd4", fontFamily:"'Noto Serif SC',serif", fontSize:"14px",
       backgroundImage:"linear-gradient(rgba(196,162,101,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(196,162,101,.015) 1px,transparent 1px)", backgroundSize:"60px 60px" }}>
 
-      {/* ANALYSIS CEREMONY OVERLAY */}
+      {/* LOADING RITUAL */}
       {analysisActive && (
         <div style={{
           position:"fixed", inset:0, zIndex:100,
-          background:"rgba(8,8,10,0.82)", backdropFilter:"blur(8px)",
+          background:"rgba(8,8,10,0.85)", backdropFilter:"blur(6px)",
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-          animation:"fadeIn .4s ease-out",
+          animation:"fadeIn .5s ease-out",
         }}>
-          {/* Dual-brain collision animation */}
-          <div style={{ position:"relative", width:200, height:120, marginBottom:32 }}>
-            {/* Science orb — left */}
+          {/* Breathing circle */}
+          <div style={{ position:"relative", width:160, height:160, marginBottom:28 }}>
+            {/* Outer ring — breathe */}
             <div style={{
-              position:"absolute", left: analysisPhase >= 4 ? 60 : 20, top:20,
-              width:60, height:60, borderRadius:"50%",
-              background:"radial-gradient(circle, rgba(82,176,154,0.15), rgba(82,176,154,0.03))",
-              border:"1px solid rgba(82,176,154,0.2)",
-              transition:"left 8s ease-in-out",
-              animation:"breathe 3s ease-in-out infinite",
-            }}>
-              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:".7rem", color:"#52b09a", fontFamily:"'JetBrains Mono',monospace" }}>BIO</div>
-            </div>
-            {/* Meta orb — right */}
+              position:"absolute", inset:0, borderRadius:"50%",
+              border:"1px solid rgba(196,162,101,0.12)",
+              animation:"ringBreathe 12s ease-in-out infinite",
+            }}/>
+            {/* Inner ring — counter-breathe */}
             <div style={{
-              position:"absolute", right: analysisPhase >= 4 ? 60 : 20, top:20,
-              width:60, height:60, borderRadius:"50%",
-              background:"radial-gradient(circle, rgba(196,162,101,0.15), rgba(196,162,101,0.03))",
-              border:"1px solid rgba(196,162,101,0.2)",
-              transition:"right 8s ease-in-out",
-              animation:"breathe 3s ease-in-out infinite 1.5s",
+              position:"absolute", inset:20, borderRadius:"50%",
+              border:"1px solid rgba(82,176,154,0.1)",
+              animation:"ringBreathe 12s ease-in-out infinite 6s",
+            }}/>
+            {/* Center breathing guide */}
+            <div style={{
+              position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center",
+              flexDirection:"column", gap:4,
             }}>
-              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:".7rem", color:"#c4a265", fontFamily:"'JetBrains Mono',monospace" }}>META</div>
-            </div>
-            {/* Collision spark — center */}
-            {analysisPhase >= 4 && (
               <div style={{
-                position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%)",
-                width:8, height:8, borderRadius:"50%", background:"#e0dcd4",
-                boxShadow:"0 0 20px rgba(224,220,212,0.4), 0 0 40px rgba(196,162,101,0.2)",
-                animation:"pulse 1.5s ease-in-out infinite",
+                width:12, height:12, borderRadius:"50%",
+                background:"radial-gradient(circle, rgba(196,162,101,0.4), rgba(196,162,101,0.05))",
+                animation:"coreBreathe 12s ease-in-out infinite",
               }}/>
-            )}
-          </div>
-
-          {/* Phase status — typewriter */}
-          <div style={{ textAlign:"center", maxWidth:500 }}>
-            <div style={{ ...S.mono, fontSize:".7rem", color:"#3a3832", letterSpacing:".2em", marginBottom:12 }}>
-              {locale === 'en' ? 'DUAL-BRAIN ANALYSIS' : '双脑对撞分析'}
-            </div>
-            {analysisPhases.slice(0, analysisPhase + 1).map((p, i) => (
-              <div key={i} style={{
-                fontSize:".82rem", color: i === analysisPhase ? "#e0dcd4" : "#3a3832",
-                marginBottom:6, transition:"color .5s",
-                fontFamily:"'JetBrains Mono',monospace",
-                animation: i === analysisPhase ? "fadeIn .5s ease-out" : "none",
+              <div style={{
+                fontSize:".68rem", color:"#5e5a52", fontFamily:"'Cormorant Garamond',serif",
+                fontStyle:"italic", letterSpacing:".15em",
+                animation:"breatheText 12s ease-in-out infinite",
               }}>
-                <span style={{ color: i === analysisPhase ? "#c4a265" : "#2a2a2a", marginRight:8 }}>{p.icon}</span>
-                {p.msg}
+                {/* Breathing text cycles via CSS — static fallback */}
+                {analysisPhase < 2 ? (locale==='en'?'Inhale':'吸') : analysisPhase < 4 ? (locale==='en'?'Hold':'持') : (locale==='en'?'Exhale':'呼')}
               </div>
-            ))}
-          </div>
-
-          {/* Breathing indicator */}
-          <div style={{ marginTop:24, width:120, height:2, background:"#16161c", borderRadius:1, overflow:"hidden" }}>
+            </div>
+            {/* Orbiting dot */}
             <div style={{
-              height:"100%", width:"30%", background:"linear-gradient(90deg, #52b09a, #c4a265)",
-              borderRadius:1, animation:"shimmer 2s ease-in-out infinite",
+              position:"absolute", top:-3, left:"50%", marginLeft:-3,
+              width:6, height:6, borderRadius:"50%", background:"#c4a265",
+              opacity:0.4, transformOrigin:"3px 83px",
+              animation:"orbit 8s linear infinite",
             }}/>
           </div>
 
-          <div style={{ marginTop:16, fontSize:".72rem", color:"#3a3832", fontStyle:"italic", fontFamily:"'Cormorant Garamond',serif" }}>
+          {/* Status header */}
+          <div style={{ ...S.mono, fontSize:".65rem", color:"#3a3832", letterSpacing:".25em", marginBottom:16 }}>
+            {locale === 'en' ? 'DUAL-BRAIN ANALYSIS' : '双脑对撞分析'}
+          </div>
+
+          {/* Status logs — only show current + fading previous */}
+          <div style={{ textAlign:"center", maxWidth:480, minHeight:80 }}>
+            {analysisPhases.slice(Math.max(0, analysisPhase - 1), analysisPhase + 1).map((p, i, arr) => {
+              const isCurrent = i === arr.length - 1;
+              return (
+                <div key={analysisPhase - (arr.length - 1 - i)} style={{
+                  fontSize: isCurrent ? ".82rem" : ".72rem",
+                  color: isCurrent ? "#d0ccc4" : "#2a2a2a",
+                  marginBottom:8,
+                  fontFamily:"'JetBrains Mono',monospace",
+                  animation: isCurrent ? "fadeIn .6s ease-out" : "none",
+                  transition:"color .5s, font-size .5s",
+                }}>
+                  <span style={{ color: isCurrent ? "#c4a265" : "#1a1a1a", marginRight:8 }}>{p.icon}</span>
+                  {p.msg}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Shimmer line */}
+          <div style={{ marginTop:20, width:100, height:1, background:"#16161c", borderRadius:1, overflow:"hidden" }}>
+            <div style={{
+              height:"100%", width:"30%",
+              background:"linear-gradient(90deg, transparent, rgba(196,162,101,0.3), transparent)",
+              animation:"shimmer 2.5s ease-in-out infinite",
+            }}/>
+          </div>
+
+          {/* Anchor text */}
+          <div style={{ marginTop:20, fontSize:".72rem", color:"#3a3832", fontStyle:"italic", fontFamily:"'Cormorant Garamond',serif", textAlign:"center", maxWidth:360, lineHeight:1.6 }}>
             {locale === 'en'
-              ? 'Our Dual-Brain engine is debating your results. This takes 30-60 seconds for deep precision.'
-              : '双脑引擎正在交叉辩证，深度精准分析需要 30-60 秒。'}
+              ? 'Our Dual-Brain engine is conducting a deep-dive cross-analysis. Quality takes time.'
+              : '双脑引擎正在进行深度交叉分析，精准需要时间。'}
           </div>
         </div>
       )}
@@ -2034,8 +2050,22 @@ ${days.map(d => `<div class="day">
         @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
         @keyframes shimmer {
           0% { transform:translateX(-100%); }
-          50% { transform:translateX(250%); }
+          50% { transform:translateX(350%); }
           100% { transform:translateX(-100%); }
+        }
+        @keyframes ringBreathe {
+          0%,100% { transform:scale(0.92); opacity:0.3; }
+          50% { transform:scale(1.08); opacity:0.6; }
+        }
+        @keyframes coreBreathe {
+          0%,100% { transform:scale(0.8); opacity:0.3; }
+          25% { transform:scale(1.6); opacity:0.7; }
+          50% { transform:scale(1.2); opacity:0.5; }
+          75% { transform:scale(1.6); opacity:0.7; }
+        }
+        @keyframes orbit {
+          from { transform:rotate(0deg); }
+          to { transform:rotate(360deg); }
         }
         * { box-sizing:border-box; margin:0; padding:0; }
         ::-webkit-scrollbar { width:4px; }
