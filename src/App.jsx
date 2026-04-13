@@ -1228,7 +1228,7 @@ ${days.map(d => `<div class="day">
               </div>
 
               <div style={{ marginTop:16, display:"flex", gap:12, alignItems:"center" }}>
-                <button onClick={async()=>{setPipe(p=>p.map((s,i)=>i>=2?{...s,st:"idle"}:s));await doSci();}} disabled={sciL||dstL}
+                <button onClick={async()=>{setPipe(p=>p.map((s,i)=>i>=2?{...s,st:"idle"}:s));setDst(null);await doSci();}} disabled={sciL||dstL}
                   style={{ ...S.btn, opacity:sciL||dstL?.5:1, cursor:sciL||dstL?"wait":"pointer" }}>
                   {sciL?"⏳ "+t('upload.sciRunning'):dstL?"⏳ "+t('upload.dstRunning'):"⚡ "+t('upload.launchBtn')}
                 </button>
