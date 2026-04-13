@@ -1392,20 +1392,20 @@ ${days.map(d => `<div class="day">
                   })}
                 </div>
 
-                {/* BaZi deep analysis (collapsible) */}
+                {/* BaZi deep analysis */}
                 {dst?.bazi_analysis && (
                   <div style={{ ...S.card, borderColor:"rgba(196,162,101,.08)" }}>
                     <div style={{ ...S.mono, fontSize:".72rem", color:"#c4a265", marginBottom:8, letterSpacing:".15em" }}>{t('analysis.dualBrainTitle')}</div>
                     {[
-                      ["📋", "pillars_detail", "四柱"],
-                      ["📐", "pattern", "格局"],
-                      ["⚡", "tiangang_relations", "天干"],
-                      ["🔄", "dizhi_relations", "地支"],
-                      ["🌡", "tiaohou", "调候"],
-                      ["🌉", "tongguan", "通关"],
-                      ["🔄", "twelve_stages", "长生"],
-                      ["💪", "wangxiang", "旺相"],
-                      ["⭐", "shenshas", "神煞"],
+                      ["📋", "pillars", locale==='en'?"Pillars":"四柱"],
+                      ["📐", "pattern", locale==='en'?"Pattern":"格局"],
+                      ["🏥", "health_map", locale==='en'?"Health Map":"健康"],
+                      // Legacy field fallbacks
+                      ["📋", "pillars_detail", locale==='en'?"Pillars":"四柱"],
+                      ["📐", "pattern", locale==='en'?"Pattern":"格局"],
+                      ["⚡", "tiangang_relations", locale==='en'?"Stems":"天干"],
+                      ["🔄", "dizhi_relations", locale==='en'?"Branches":"地支"],
+                      ["⭐", "shenshas", locale==='en'?"Stars":"神煞"],
                     ].map(([icon, key, label]) => dst.bazi_analysis[key] ? (
                       <div key={key} style={{ fontSize:".8rem", color:"#9a9488", lineHeight:1.6, marginBottom:4, padding:"4px 8px", background:"rgba(196,162,101,.02)" }}>
                         <span style={{ color:"#6a5a35" }}>{icon} {label}:</span> {dst.bazi_analysis[key]}
