@@ -892,12 +892,12 @@ function Dashboard({ user, setUser, onLogout }) {
     try {
       // Build context for the AI
       let ctx = `User: ${age}y/o ${sex === "M" ? "male" : "female"}, Day Master ${bazi.dm}(${bazi.dme}), Major Cycle ${dy.lbl}, Annual Cycle ${ln.lbl}\n`;
-      if (sci?.summary) ctx += `科学大脑总结: ${sci.summary}\n`;
-      if (dst?.temporal_outlook) ctx += `命理大脑总结: ${dst.temporal_outlook}\n`;
-      if (sci?.items?.length) ctx += `异常指标: ${sci.items.map(i => i.metric_cn).join("、")}\n`;
+      if (sci?.summary) ctx += `Science Brain Summary: ${sci.summary}\n`;
+      if (dst?.temporal_outlook) ctx += `Meta Brain Summary: ${dst.temporal_outlook}\n`;
+      if (sci?.items?.length) ctx += `Anomalies: ${sci.items.map(i => i.metric || i.metric_cn).join(", ")}\n`;
       // Add last few chat messages for continuity
-      const recent = chatHistory.slice(-4).map(m => `${m.role === "user" ? "用户" : (m.brain === "science" ? "科学脑" : "命理脑")}: ${m.text}`).join("\n");
-      if (recent) ctx += `\n对话历史:\n${recent}`;
+      const recent = chatHistory.slice(-4).map(m => `${m.role === "user" ? "User" : (m.brain === "science" ? "Science Brain" : "Meta Brain")}: ${m.text}`).join("\n");
+      if (recent) ctx += `\nChat History:\n${recent}`;
 
       const res = await apiChat({ brain: chatBrain, question: q, context: ctx, lang: locale });
       setChatHistory(prev => [...prev, { role: "assistant", text: res.answer || (locale==='en'?"No response":"无回答"), brain: chatBrain }]);
@@ -1297,7 +1297,7 @@ ${days.map(d => `<div class="day">
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                     <div style={S.label}>{t('radar.title')}</div>
                     <div style={{ ...S.mono, fontSize:".72rem", color: timeOffset===0 ? "#5e5a52" : "#c4a265" }}>
-                      {targetYear}年{targetMonth}月
+                      {locale==="en" ? `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][targetMonth-1]} ${targetYear}` : `${targetYear}年${targetMonth}月`}
                       {timeOffset !== 0 && <span style={{ color:"#5e5a52" }}> (+{timeOffset}月)</span>}
                     </div>
                   </div>
@@ -1346,7 +1346,7 @@ ${days.map(d => `<div class="day">
                             fontWeight: i === timeOffset ? 700 : 400,
                             fontFamily:"'JetBrains Mono',monospace",
                           }}>
-                            {m}月
+                            {locale==="en" ? ["J","F","M","A","M","J","J","A","S","O","N","D"][m-1] : m+"月"}
                           </div>
                         );
                       })}
@@ -1356,7 +1356,7 @@ ${days.map(d => `<div class="day">
                   {/* 当月五行旺衰速览 */}
                   {timeOffset > 0 && (
                     <div style={{ marginTop:8, padding:"8px 10px", background:"rgba(196,162,101,.03)", border:"1px solid rgba(196,162,101,.06)", fontSize:".78rem" }}>
-                      <span style={{ color:"#6a5a35" }}>{targetYear}年{targetMonth}月</span>
+                      <span style={{ color:"#6a5a35" }}>{locale==="en" ? `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][targetMonth-1]} ${targetYear}` : `${targetYear}年${targetMonth}月`}</span>
                       <span style={{ color:EC[MONTH_WX[targetMonth].主], marginLeft:8 }}>主气 {MONTH_WX[targetMonth].主}</span>
                       <span style={{ color:EC[MONTH_WX[targetMonth].旺], marginLeft:6 }}>旺 {MONTH_WX[targetMonth].旺}</span>
                       <span style={{ color:"#c44040", marginLeft:6 }}>衰 {MONTH_WX[targetMonth].衰}</span>
@@ -1476,7 +1476,7 @@ ${days.map(d => `<div class="day">
                                   <div style={{ flex:1 }}>
                                     <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
                                       <div style={{ width:6, height:6, borderRadius:"50%", background:"#52b09a" }}/>
-                                      <span style={{ ...S.mono, fontSize:".72rem", color:"#52b09a" }}>{t('analysis.scienceBrain')} · {it.metric_cn}</span>
+                                      <span style={{ ...S.mono, fontSize:".72rem", color:"#52b09a" }}>{t('analysis.scienceBrain')} · {it.metric ? mName(it.metric) : it.metric_cn}</span>
                                       {it.severity && <span style={{ ...S.mono, fontSize:".65rem", padding:"1px 6px", background:it.severity==="severe"?"rgba(196,64,64,.1)":"rgba(212,168,64,.1)", color:it.severity==="severe"?"#c44040":"#d4a840" }}>{it.severity.toUpperCase()}</span>}
                                     </div>
                                     {it.anatomical_context && <div style={{ fontSize:".85rem", color:"#c4a265", marginBottom:4 }}>🔬 {it.anatomical_context}</div>}
@@ -1577,8 +1577,8 @@ ${days.map(d => `<div class="day">
                                 padding:"6px 10px", background:"#16161c", borderLeft:`2px solid ${EC[it.organ_system]||"#52b09a"}`,
                                 marginBottom:4, cursor:"pointer", transition:"background .2s"
                               }}>
-                                <span style={{ fontSize:".85rem", color:"#e0dcd4" }}>{it.metric_cn}</span>
-                                <span style={{ fontSize:".75rem", color:"#5e5a52", marginLeft:6 }}>{it.organ_system}</span>
+                                <span style={{ fontSize:".85rem", color:"#e0dcd4" }}>{it.metric ? mName(it.metric) : it.metric_cn}</span>
+                                <span style={{ fontSize:".75rem", color:"#5e5a52", marginLeft:6 }}>{sysLabel(it.organ_system)}</span>
                               </div>
                             )) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>{t('analysis.noData')}</div>}
                           </div>
