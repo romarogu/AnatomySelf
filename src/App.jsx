@@ -510,7 +510,7 @@ function AuthScreen({ onLogin }) {
         {/* Language toggle */}
         <div style={{ textAlign:"right", marginBottom:12 }}>
           <button onClick={toggleLang} style={{ background:"transparent", border:"1px solid rgba(196,162,101,.15)", color:"#5e5a52", padding:"3px 10px", fontSize:".72rem", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace", borderRadius:2 }}>
-            {locale === 'en' ? '中文' : 'EN'}
+            {locale === 'en' ? 'EN' : '中文'}
           </button>
         </div>
         {/* Logo */}
@@ -1099,7 +1099,7 @@ ${days.map(d => `<div class="day">
           <div onClick={toggleLang} style={{ cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", width:28, height:28, borderRadius:"50%", background:"rgba(196,162,101,.04)", border:"1px solid rgba(196,162,101,.06)", transition:"all .25s", position:"relative" }}
             onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.25)";e.currentTarget.style.background="rgba(196,162,101,.08)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.06)";e.currentTarget.style.background="rgba(196,162,101,.04)";}}>
             <span style={{ fontSize:".62rem", color:"#c4a265", fontFamily:"'JetBrains Mono',monospace", fontWeight:600, letterSpacing:"-0.5px" }}>
-              {locale === 'en' ? '文' : 'En'}
+              {locale === 'en' ? 'EN' : '中'}
             </span>
           </div>
           <button onClick={onLogout} style={{ background:"rgba(196,64,64,.06)", border:"1px solid rgba(196,64,64,.2)", color:"#c44040", padding:"4px 14px", fontSize:".8rem", cursor:"pointer", fontFamily:"'Noto Serif SC',serif", borderRadius:2, transition:"all .2s" }}
