@@ -1139,7 +1139,7 @@ ${days.map(d => `<div class="day">
       {analysisActive && (
         <div style={{
           position:"fixed", inset:0, zIndex:100,
-          background:"rgba(8,8,10,0.92)", backdropFilter:"blur(16px)",
+          background:"rgba(8,8,10,0.82)", backdropFilter:"blur(8px)",
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
           animation:"fadeIn .4s ease-out",
         }}>

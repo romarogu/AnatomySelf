@@ -58,14 +58,25 @@ export default async function handler(req, res) {
 
     if (!resp.ok) {
       const err = await resp.text();
-      return res.status(500).json({ error: 'Claude Science 失败(' + resp.status + '): ' + err.substring(0, 300) });
+      const msg = err.startsWith('<') ? `API gateway error (${resp.status})` : err.substring(0, 200);
+      return res.status(500).json({ error: `Science API error (${resp.status}): ${msg}` });
     }
 
-    const data = await resp.json();
+    const rawText = await resp.text();
+    // Guard against HTML error pages
+    if (rawText.startsWith('<') || rawText.startsWith('<!')) {
+      return res.status(502).json({ error: 'Science API returned invalid response. Please retry.' });
+    }
+
+    let data;
+    try { data = JSON.parse(rawText); } catch {
+      return res.status(502).json({ error: 'Science API response parse error. Please retry.' });
+    }
+
     const txt = (data.content || []).map(c => c.text || '').join('');
     const parsed = parseJson(txt);
     res.json(parsed || { items: [], summary: txt.substring(0, 500) });
   } catch (e) {
-    res.status(500).json({ error: '科学分析失败: ' + e.message });
+    res.status(500).json({ error: 'Science analysis error: ' + e.message });
   }
 }

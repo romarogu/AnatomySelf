@@ -122,10 +122,20 @@ ${jsonTemplate}`;
 
     if (!resp.ok) {
       const err = await resp.text();
-      return res.status(500).json({ error: 'DeepSeek error(' + resp.status + '): ' + err.substring(0, 300) });
+      const msg = err.startsWith('<') ? `API gateway error (${resp.status})` : err.substring(0, 200);
+      return res.status(500).json({ error: `DeepSeek error (${resp.status}): ${msg}` });
     }
 
-    const data = await resp.json();
+    const rawText = await resp.text();
+    if (rawText.startsWith('<') || rawText.startsWith('<!')) {
+      return res.status(502).json({ error: 'Meta API returned invalid response. Please retry.' });
+    }
+
+    let data;
+    try { data = JSON.parse(rawText); } catch {
+      return res.status(502).json({ error: 'Meta API response parse error. Please retry.' });
+    }
+
     const txt = data.choices?.[0]?.message?.content || '';
     const parsed = parseJson(txt);
     res.json(parsed || { collision_items: [], temporal_outlook: txt.substring(0, 800) });
