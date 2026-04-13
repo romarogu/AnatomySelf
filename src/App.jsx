@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import * as d3 from "d3";
+import { useI18n } from "./i18n/index.jsx";
 import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiLogout, apiSaveUser, apiChat } from "./api.js";
 
 // ════════════════════════════════════════
@@ -88,12 +89,13 @@ function applyTemp(base, dy, ln) {
 // MEDICAL REFERENCES — 五行标准化体系 (15 核心指标)
 // ════════════════════════════════════════
 // 五行分组顺序
+// 五行分组顺序 — i18n key references
 const WX_GROUPS = [
-  { el:"木", label:"肝胆系统", keys:["ALT","AST","TBIL"] },
-  { el:"火", label:"心血管系统", keys:["SBP","DBP","RHR"] },
-  { el:"土", label:"脾胃代谢", keys:["FBG","HbA1c","TG"] },
-  { el:"金", label:"呼吸系统", keys:["FVC","SpO2","LDL_C"] },
-  { el:"水", label:"肾脏内分泌", keys:["Cr","UA","VitD"] },
+  { el:"木", sysKey:"hepatic", keys:["ALT","AST","TBIL"] },
+  { el:"火", sysKey:"cardiovascular", keys:["SBP","DBP","RHR"] },
+  { el:"土", sysKey:"digestive", keys:["FBG","HbA1c","TG"] },
+  { el:"金", sysKey:"respiratory", keys:["FVC","SpO2","LDL_C"] },
+  { el:"水", sysKey:"renal", keys:["Cr","UA","VitD"] },
 ];
 
 const RR = {
@@ -461,13 +463,14 @@ const INIT_M = [
 // LOGIN / REGISTER SCREEN
 // ════════════════════════════════════════
 function AuthScreen({ onLogin }) {
+  const { t, locale, toggleLang } = useI18n();
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!username.trim() || !password.trim()) { setError("请填写用户名和密码"); return; }
+    if (!username.trim() || !password.trim()) { setError(t('auth.fillBoth')); return; }
     try {
       if (mode === "register") {
         const res = await apiRegister(username.trim(), password);
@@ -480,13 +483,19 @@ function AuthScreen({ onLogin }) {
         if (!userData.metrics) userData.metrics = INIT_M;
         onLogin(userData);
       }
-    } catch (err) { setError("网络错误: " + err.message); }
+    } catch (err) { setError(t('auth.networkError') + ": " + err.message); }
   };
 
   return (
     <div style={{ minHeight:"100vh", background:"#08080a", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Noto Serif SC',serif",
       backgroundImage:"linear-gradient(rgba(196,162,101,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(196,162,101,.015) 1px,transparent 1px)", backgroundSize:"60px 60px" }}>
       <div style={{ width:420, padding:48, background:"#0f1014", border:"1px solid rgba(196,162,101,0.1)" }}>
+        {/* Language toggle */}
+        <div style={{ textAlign:"right", marginBottom:12 }}>
+          <button onClick={toggleLang} style={{ background:"transparent", border:"1px solid rgba(196,162,101,.15)", color:"#5e5a52", padding:"3px 10px", fontSize:".72rem", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace", borderRadius:2 }}>
+            {locale === 'en' ? '中文' : 'EN'}
+          </button>
+        </div>
         {/* Logo */}
         <div style={{ textAlign:"center", marginBottom:36 }}>
           <svg viewBox="0 0 60 60" width="48" height="48" fill="none" style={{margin:"0 auto 16px",display:"block"}}>
@@ -498,12 +507,12 @@ function AuthScreen({ onLogin }) {
             </circle>
           </svg>
           <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.5rem", fontWeight:300, letterSpacing:".15em", color:"#e0dcd4" }}>ANATOMYSELF</div>
-          <div style={{ fontSize:"0.85rem", color:"#5e5a52", letterSpacing:".3em", marginTop:4 }}>个 人 生 命 实 验 室</div>
+          <div style={{ fontSize:"0.78rem", color:"#5e5a52", letterSpacing:".15em", marginTop:4 }}>{t('brand.tagline')}</div>
         </div>
 
         {/* Toggle */}
         <div style={{ display:"flex", marginBottom:28, border:"1px solid rgba(196,162,101,0.1)" }}>
-          {[["login","登录"],["register","注册"]].map(([m,l]) => (
+          {[["login",t('auth.login')],["register",t('auth.register')]].map(([m,l]) => (
             <button key={m} onClick={()=>{setMode(m);setError("");}} style={{
               flex:1, padding:"10px", background:mode===m?"rgba(196,162,101,0.08)":"transparent",
               border:"none", color:mode===m?"#c4a265":"#5e5a52", fontSize:"0.95rem", cursor:"pointer",
@@ -515,23 +524,23 @@ function AuthScreen({ onLogin }) {
         {/* Form */}
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div>
-            <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>用户名</div>
-            <input value={username} onChange={e=>setUsername(e.target.value)} placeholder="请输入用户名"
+            <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{t('auth.username')}</div>
+            <input value={username} onChange={e=>setUsername(e.target.value)} placeholder={t('auth.usernamePh')}
               style={S.input} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
           <div>
-            <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>密码</div>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="请输入密码"
+            <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{t('auth.password')}</div>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={t('auth.passwordPh')}
               style={S.input} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
           {error && <div style={{ fontSize:"0.85rem", color:"#c44040", padding:"8px 12px", background:"rgba(196,64,64,0.06)", border:"1px solid rgba(196,64,64,0.15)" }}>{error}</div>}
           <button onClick={handleSubmit} style={{...S.btn, width:"100%", marginTop:8}}>
-            {mode==="login"?"登录 · Enter":"注册新账户"}
+            {mode==="login"?t('auth.loginBtn'):t('auth.registerBtn')}
           </button>
         </div>
 
         <div style={{ textAlign:"center", marginTop:24, fontSize:"0.8rem", color:"#3a3832", fontStyle:"italic", fontFamily:"'Cormorant Garamond',serif" }}>
-          Where anatomical precision meets celestial cartography
+          {t('brand.subtitle')}
         </div>
       </div>
     </div>
@@ -647,6 +656,11 @@ export default function App() {
 // DASHBOARD (post-login)
 // ════════════════════════════════════════
 function Dashboard({ user, setUser, onLogout }) {
+  const { t, locale, toggleLang } = useI18n();
+  // Helper: get system label from WX element
+  const sysLabel = (el) => t(`systems.${t(`systemMap.${el}`)}.name`);
+  const sysOrgan = (el) => t(`systems.${t(`systemMap.${el}`)}.organ`);
+  const elName = (el) => t(`elements.${el}`);
   // Ensure all 15 standard slots exist, merging any saved data
   const initMetrics = useMemo(() => {
     const saved = user.metrics || [];
@@ -669,7 +683,7 @@ function Dashboard({ user, setUser, onLogout }) {
   const [dst, setDst] = useState(null);
   const [dstL, setDstL] = useState(false);
   const [tab, setTab] = useState("upload");
-  const [pipe, setPipe] = useState([{lb:"上传",st:"idle"},{lb:"OCR",st:"idle"},{lb:"科学脑",st:"idle"},{lb:"命理脑",st:"idle"}]);
+  const [pipe, setPipe] = useState([{lb:"Upload",st:"idle"},{lb:"OCR",st:"idle"},{lb:"Science",st:"idle"},{lb:"Meta",st:"idle"}]);
   const fileRef = useRef(null);
   // Chat state
   const [chatBrain, setChatBrain] = useState("science"); // "science" or "destiny"
@@ -923,7 +937,7 @@ ${WX_GROUPS.map(g => {
     const inR = hasVal && m.value>=ref.l && m.value<=ref.h;
     return `<div class="metric-row"><span class="metric-name">${ref.cn} <span style="font-size:.65rem;color:#5e5a52">${k}</span></span><span class="metric-val ${hasVal?(inR?'normal':'abnormal'):''}">${hasVal?m.value:'—'} <span style="font-size:.68rem;color:#3a3832">${ref.u}</span></span></div>`;
   }).join('');
-  return `<div style="margin-bottom:16px"><div class="wx-group"><div class="wx-dot" style="background:${EC[g.el]}"></div><div class="wx-label" style="color:${EC[g.el]}">${g.el} · ${g.label}</div></div>${items}</div>`;
+  return `<div style="margin-bottom:16px"><div class="wx-group"><div class="wx-dot" style="background:${EC[g.el]}"></div><div class="wx-label" style="color:${EC[g.el]}">${g.el} · ${sysLabel(g.el)}</div></div>${items}</div>`;
 }).join('')}
 </div>
 
@@ -976,7 +990,7 @@ Where anatomical precision meets celestial cartography
         weekday: weekDays[d.getDay()],
         gan: ds, zhi: db, el: dayEl, rel, energy,
         advice: energy >= 80 ? "宜进取" : energy >= 60 ? "宜平稳" : "宜守护",
-        organ: EO[dayEl],
+        organ: sysOrgan(dayEl),
       };
     });
 
@@ -1033,11 +1047,11 @@ ${days.map(d => `<div class="day">
   }, [bazi, dy, targetLN]);
 
   const tabs = [
-    { id: "upload", lb: "📄 数据中心" },
-    { id: "radar", lb: "⚡ 对撞分析" },
-    { id: "tuning", lb: "🎯 生命微调" },
-    { id: "chat", lb: "💬 深度对话" },
-    { id: "metrics", lb: "📊 体检指标" },
+    { id: "upload", lb: "📄 " + t('nav.dataCenter') },
+    { id: "radar", lb: "⚡ " + t('nav.collisionAnalysis') },
+    { id: "tuning", lb: "🎯 " + t('nav.lifeTuning') },
+    { id: "chat", lb: "💬 " + t('nav.deepChat') },
+    { id: "metrics", lb: "📊 " + t('nav.biomarkers') },
   ];
 
   return (
@@ -1050,7 +1064,7 @@ ${days.map(d => `<div class="day">
           <svg viewBox="0 0 28 28" width="22" height="22" fill="none"><circle cx="14" cy="14" r="13" stroke="#c4a265" strokeWidth=".5" opacity=".4"/><circle cx="14" cy="10" r="2.5" stroke="#e0dcd4" strokeWidth=".4" opacity=".4"/><path d="M14 12.5L14 22M14 16L10 19M14 16L18 19" stroke="#e0dcd4" strokeWidth=".4" opacity=".4"/></svg>
           <div>
             <div style={{ fontFamily:"'Cormorant Garamond',serif", fontWeight:300, fontSize:"1rem", letterSpacing:".12em" }}>ANATOMYSELF</div>
-            <div style={{ fontSize:".65rem", color:"#5e5a52", letterSpacing:".2em" }}>双模型解耦 · DUAL-BRAIN</div>
+            <div style={{ fontSize:".65rem", color:"#5e5a52", letterSpacing:".2em" }}>{t('header.dualBrain')}</div>
           </div>
         </div>
         <div style={{ display:"flex", gap:12, alignItems:"center" }}>
@@ -1059,10 +1073,13 @@ ${days.map(d => `<div class="day">
               <div style={{ fontSize:".8rem", color:"#e0dcd4", lineHeight:1.1 }}>{p.s}{p.b}</div>
             </div>)}
           </div>
-          <span style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}岁</span>
+          <span style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}{t('sidebar.age')}</span>
+          <button onClick={toggleLang} style={{ background:"transparent", border:"1px solid rgba(196,162,101,.15)", color:"#c4a265", padding:"4px 10px", fontSize:".72rem", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace", borderRadius:2 }}>
+            {locale === 'en' ? '中文' : 'EN'}
+          </button>
           <button onClick={onLogout} style={{ background:"rgba(196,64,64,.06)", border:"1px solid rgba(196,64,64,.2)", color:"#c44040", padding:"4px 14px", fontSize:".8rem", cursor:"pointer", fontFamily:"'Noto Serif SC',serif", borderRadius:2, transition:"all .2s" }}
             onMouseEnter={e=>{e.target.style.background="rgba(196,64,64,.15)";}} onMouseLeave={e=>{e.target.style.background="rgba(196,64,64,.06)";}}>
-            退出登录
+            {t('header.logout')}
           </button>
         </div>
       </div>
@@ -1070,15 +1087,15 @@ ${days.map(d => `<div class="day">
       <div style={{ display:"flex", minHeight:"calc(100vh - 50px)" }}>
         {/* SIDEBAR */}
         <div style={{ width:220, minWidth:220, background:"#0c0c0f", borderRight:"1px solid rgba(196,162,101,.08)", padding:"16px 14px", display:"flex", flexDirection:"column", gap:12, overflowY:"auto" }}>
-          <div style={S.label}>用户信息</div>
+          <div style={S.label}>{t('sidebar.userInfo')}</div>
           <div style={{ fontSize:".85rem", color:"#9a9488" }}>
-            {by}年{bm}月{bd}日 {bh}时<br/>
-            {sex==="M"?"男":"女"}性 · {age}岁<br/>
-            日主：<span style={{color:EC[bazi.dme]}}>{bazi.dm}({bazi.dme})</span>
+            {by}/{bm}/{bd} {bh}:00<br/>
+            {sex==="M"?t('sidebar.male'):t('sidebar.female')} · {age}{t('sidebar.age')}<br/>
+            {t('sidebar.dayMaster')}：<span style={{color:EC[bazi.dme]}}>{bazi.dm}({bazi.dme})</span>
           </div>
 
           <div style={{ borderTop:"1px solid rgba(196,162,101,.06)", paddingTop:10 }}>
-            <div style={S.label}>五脏速扫</div>
+            <div style={S.label}>{t('sidebar.organScan')}</div>
             {["火","木","土","金","水"].map(el => {
               const sc = Math.round(medWX[el]);
               return (
@@ -1095,16 +1112,16 @@ ${days.map(d => `<div class="day">
 
           {anoms.length>0 && (
             <div style={{ borderTop:"1px solid rgba(196,64,64,.15)", paddingTop:8 }}>
-              <div style={{ ...S.mono, fontSize:".72rem", color:"#c44040", letterSpacing:".1em" }}>⚠ 异常 {anoms.length} 项</div>
+              <div style={{ ...S.mono, fontSize:".72rem", color:"#c44040", letterSpacing:".1em" }}>⚠ {t('sidebar.anomalies')} {anoms.length} {t('sidebar.items')}</div>
               {anoms.map(a => <div key={a.key} style={{ fontSize:".8rem", color:"#c44040", marginTop:3 }}>{a.ref.cn} {a.st}</div>)}
             </div>
           )}
 
           <div style={{ borderTop:"1px solid rgba(196,162,101,.06)", paddingTop:8 }}>
-            <div style={S.label}>大运·流年</div>
+            <div style={S.label}>{t('sidebar.currentCycle')}</div>
             <div style={{ fontSize:".85rem", color:"#9a9488" }}>
-              大运：<span style={{color:EC[dy.el]}}>{dy.lbl}({dy.el})</span><br/>
-              流年：<span style={{color:EC[ln.el]}}>{ln.lbl}({ln.el})</span>
+              {t('sidebar.majorCycle')}：<span style={{color:EC[dy.el]}}>{dy.lbl}({dy.el})</span><br/>
+              {t('sidebar.annualCycle')}：<span style={{color:EC[ln.el]}}>{ln.lbl}({ln.el})</span>
             </div>
           </div>
         </div>
@@ -1143,7 +1160,7 @@ ${days.map(d => `<div class="day">
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
                 {/* Upload */}
                 <div style={S.card}>
-                  <div style={S.label}>步骤1 · 文件导入</div>
+                  <div style={S.label}>{t("upload.step1")}</div>
                   <div onClick={()=>fileRef.current?.click()} style={{
                     border:"1px dashed rgba(196,162,101,.2)", padding:"36px 20px", textAlign:"center",
                     cursor:"pointer", background:file?"rgba(82,176,154,.04)":"transparent", marginTop:10, transition:"all .3s"
@@ -1152,18 +1169,18 @@ ${days.map(d => `<div class="day">
                     {file ? (
                       <div><div style={{ fontSize:"1rem", color:"#52b09a" }}>✓ {file.name}</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>{(file.size/1024).toFixed(1)}KB · 点击更换</div></div>
                     ) : (
-                      <div><div style={{ fontSize:"2rem", color:"#6a5a35", marginBottom:8 }}>⬆</div><div style={{ fontSize:".95rem", color:"#9a9488" }}>上传体检报告截图</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>支持 PNG / JPG（拍照或截图）</div></div>
+                      <div><div style={{ fontSize:"2rem", color:"#6a5a35", marginBottom:8 }}>⬆</div><div style={{ fontSize:".95rem", color:"#9a9488" }}>{t("upload.uploadPrompt")}</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>{t('upload.uploadSub')}</div></div>
                     )}
                   </div>
                   {ocrL && <div style={{ marginTop:14, display:"flex", alignItems:"center", gap:8 }}>
                     <div style={{ width:12, height:12, border:"2px solid #c4a265", borderTopColor:"transparent", borderRadius:"50%", animation:"spin .8s linear infinite" }}/>
-                    <span style={{ fontSize:".85rem", color:"#c4a265" }}>多模态 OCR 提取中...</span>
+                    <span style={{ fontSize:".85rem", color:"#c4a265" }}>{t("upload.ocrRunning")}</span>
                   </div>}
                 </div>
 
                 {/* OCR result */}
                 <div style={S.card}>
-                  <div style={S.label}>步骤2 · OCR 结果</div>
+                  <div style={S.label}>{t("upload.step2")}</div>
                   {ocr ? (
                     <div style={{ marginTop:10 }}>
                       {ocr.ocr_unavailable && (
@@ -1188,18 +1205,18 @@ ${days.map(d => `<div class="day">
               <div style={{ marginTop:16, display:"flex", gap:12, alignItems:"center" }}>
                 <button onClick={async()=>{setPipe(p=>p.map((s,i)=>i>=2?{...s,st:"idle"}:s));await doSci();}} disabled={sciL||dstL}
                   style={{ ...S.btn, opacity:sciL||dstL?.5:1, cursor:sciL||dstL?"wait":"pointer" }}>
-                  {sciL?"⏳ 科学大脑分析中...":dstL?"⏳ 命理大脑对撞中...":"⚡ 启动双脑对撞分析"}
+                  {sciL?"⏳ "+t('upload.sciRunning'):dstL?"⏳ "+t('upload.dstRunning'):"⚡ "+t('upload.launchBtn')}
                 </button>
                 <span style={{ fontSize:".85rem", color:"#5e5a52" }}>
-                  {metrics.filter(m=>m.value!=null).length} 项指标已录入
-                  {anoms.length > 0 ? ` · ${anoms.length} 项异常` : " · 全部正常"}
+                  {metrics.filter(m=>m.value!=null).length} {t('upload.itemsFilled')}
+                  {anoms.length > 0 ? ` · ${anoms.length} ${t('upload.anomalyCount')}` : ` · ${t('upload.allNormal')}`}
                 </span>
               </div>
 
               {/* Editable metrics — Bento 五行阵列 */}
               <div style={{ ...S.card, marginTop:16, padding:"14px 16px" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                  <div style={S.label}>当前指标 · 五行标准化</div>
+                  <div style={S.label}>{t('upload.metricsTitle')}</div>
                   <div style={{ ...S.mono, fontSize:".75rem", color:metrics.filter(m=>m.value!=null).length===15?"#52b09a":"#5e5a52" }}>
                     {metrics.filter(m=>m.value!=null).length}/15
                   </div>
@@ -1207,7 +1224,7 @@ ${days.map(d => `<div class="day">
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(5, minmax(0, 180px))", gap:8, justifyContent:"center" }}>
                   {WX_GROUPS.map(g => (
                     <div key={g.el} style={{ background:"rgba(0,0,0,.25)", borderTop:`2px solid ${EC[g.el]}`, padding:"8px 10px" }}>
-                      <div style={{ fontSize:".82rem", color:EC[g.el], marginBottom:6, textAlign:"center", fontWeight:500 }}>{g.el} · {g.label}</div>
+                      <div style={{ fontSize:".82rem", color:EC[g.el], marginBottom:6, textAlign:"center", fontWeight:500 }}>{g.el} · {sysLabel(g.el)}</div>
                       {g.keys.map(k => {
                         const m = metrics.find(x=>x.key===k);
                         const ref = gR(k,age,sex);
@@ -1253,7 +1270,7 @@ ${days.map(d => `<div class="day">
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div style={S.card}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                    <div style={S.label}>对撞共振雷达</div>
+                    <div style={S.label}>{t('radar.title')}</div>
                     <div style={{ ...S.mono, fontSize:".72rem", color: timeOffset===0 ? "#5e5a52" : "#c4a265" }}>
                       {targetYear}年{targetMonth}月
                       {timeOffset !== 0 && <span style={{ color:"#5e5a52" }}> (+{timeOffset}月)</span>}
@@ -1266,21 +1283,21 @@ ${days.map(d => `<div class="day">
                     timeOffset={timeOffset}
                   />
                   <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:10, fontSize:".78rem" }}>
-                    <span style={{ color:"#c4a265" }}>● 命理层</span>
-                    <span style={{ color:"#e0dcd4" }}>◌ 医学层</span>
-                    <span style={{ color:"#c44040" }}>◎ 关注</span>
+                    <span style={{ color:"#c4a265" }}>{t('radar.destinyLayer')}</span>
+                    <span style={{ color:"#e0dcd4" }}>{t('radar.medicalLayer')}</span>
+                    <span style={{ color:"#c44040" }}>{t('radar.alertDot')}</span>
                   </div>
 
                   {/* 时空快进滑动条 */}
                   <div style={{ marginTop:14, padding:"10px 0 4px" }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                      <span style={{ fontSize:".75rem", color:"#6a5a35" }}>☯ 时空推演</span>
+                      <span style={{ fontSize:".75rem", color:"#6a5a35" }}>{t('radar.timeTravel')}</span>
                       {timeOffset !== 0 && (
                         <button onClick={() => setTimeOffset(0)} style={{
                           background:"transparent", border:"1px solid rgba(196,162,101,.15)",
                           color:"#5e5a52", fontSize:".68rem", padding:"2px 8px", cursor:"pointer",
                           fontFamily:"'JetBrains Mono',monospace",
-                        }}>回到当月</button>
+                        }}>{t('radar.backToNow')}</button>
                       )}
                     </div>
                     <input type="range" min="0" max="11" value={timeOffset}
@@ -1319,7 +1336,7 @@ ${days.map(d => `<div class="day">
 
                 {/* Dimension quick-select list */}
                 <div style={S.card}>
-                  <div style={S.label}>五维概览（点击聚焦）</div>
+                  <div style={S.label}>{t('radar.dimOverview')}</div>
                   {colls.map(c => {
                     const isActive = selectedDim === c.el;
                     return (
@@ -1332,7 +1349,7 @@ ${days.map(d => `<div class="day">
                       }}>
                         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                           <span style={{ fontSize:"1rem", color:EC[c.el] }}>{c.el}</span>
-                          <span style={{ fontSize:".85rem", color: isActive ? "#e0dcd4" : "#9a9488" }}>{EO[c.el]}</span>
+                          <span style={{ fontSize:".85rem", color: isActive ? "#e0dcd4" : "#9a9488" }}>{sysOrgan(c.el)}</span>
                         </div>
                         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                           <div style={{ width:40, height:4, background:"#08080a", borderRadius:1 }}>
@@ -1383,7 +1400,7 @@ ${days.map(d => `<div class="day">
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                           <div>
                             <span style={{ fontSize:"1.3rem", color:EC[selectedDim], fontWeight:600 }}>{selectedDim}</span>
-                            <span style={{ fontSize:"1.1rem", color:"#e0dcd4", marginLeft:10 }}>{EO[selectedDim]}</span>
+                            <span style={{ fontSize:"1.1rem", color:"#e0dcd4", marginLeft:10 }}>{sysOrgan(selectedDim)}</span>
                           </div>
                           <div style={{ display:"flex", gap:12, alignItems:"center" }}>
                             <div style={{ textAlign:"right" }}>
@@ -1417,7 +1434,7 @@ ${days.map(d => `<div class="day">
                         /* Dialogue-style cross analysis */
                         <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
                           <div style={{ padding:"12px 16px", background:"rgba(196,162,101,0.03)", borderBottom:"1px solid rgba(196,162,101,0.06)" }}>
-                            <div style={{ ...S.mono, fontSize:".75rem", color:"#6a5a35", letterSpacing:".15em" }}>双脑对话式关联分析 · {selectedDim} {EO[selectedDim]}</div>
+                            <div style={{ ...S.mono, fontSize:".75rem", color:"#6a5a35", letterSpacing:".15em" }}>双脑对话式关联分析 · {selectedDim} {sysOrgan(selectedDim)}</div>
                           </div>
                           <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
                             {/* Interleave science and destiny items as a dialogue */}
@@ -1484,7 +1501,7 @@ ${days.map(d => `<div class="day">
                         </div>
                       ) : (
                         <div style={{ ...S.card, padding:24 }}>
-                          <div style={{ fontSize:"1rem", color:"#c4a265", marginBottom:8 }}>{selectedDim} {EO[selectedDim]}</div>
+                          <div style={{ fontSize:"1rem", color:"#c4a265", marginBottom:8 }}>{selectedDim} {sysOrgan(selectedDim)}</div>
                           <div style={{ fontSize:".88rem", color:"#9a9488", lineHeight:1.8 }}>
                             此维度体检指标均在正常范围内。
                             {coll?.dest < 40
@@ -1546,7 +1563,7 @@ ${days.map(d => `<div class="day">
                                 padding:"6px 10px", background:"#16161c", borderLeft:`2px solid ${EC[it.organ_wuxing]||"#c4a265"}`,
                                 marginBottom:4, cursor:"pointer", transition:"background .2s"
                               }}>
-                                <span style={{ fontSize:".85rem", color:"#e0dcd4" }}>{it.organ_wuxing} {EO[it.organ_wuxing]}</span>
+                                <span style={{ fontSize:".85rem", color:"#e0dcd4" }}>{it.organ_wuxing} {sysOrgan(it.organ_wuxing)}</span>
                                 {it.risk_window && <span style={{ fontSize:".72rem", color:"#d4a840", marginLeft:6 }}>{it.risk_window}</span>}
                               </div>
                             )) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>暂无数据</div>}
@@ -1587,7 +1604,7 @@ ${days.map(d => `<div class="day">
                         ...S.btn, flex:1, fontSize:".85rem", padding:"10px 16px",
                         background:"linear-gradient(135deg, #2a4a3a, #52b09a)",
                       }}>
-                        📋 生成生命说明书 · 科学脑报告
+                        📋 {t('reports.scienceReport')}
                       </button>
                     )}
                     {dst && (
@@ -1595,17 +1612,17 @@ ${days.map(d => `<div class="day">
                         ...S.btn, flex:1, fontSize:".85rem", padding:"10px 16px",
                         background:"linear-gradient(135deg, #3a2a1a, #c4a265)",
                       }}>
-                        ☯ 生成一周能量防御指南
+                        ☯ {t('reports.destinyGuide')}
                       </button>
                     )}
                   </div>
 
                   {/* 免责声明 */}
                   <div style={{ padding:"12px 16px", background:"rgba(196,162,101,.02)", border:"1px solid rgba(196,162,101,.06)", fontSize:".72rem", color:"#4a4a44", lineHeight:1.7 }}>
-                    <div style={{ ...S.mono, fontSize:".65rem", color:"#3a3832", marginBottom:4, letterSpacing:".1em" }}>DISCLAIMER</div>
-                    <span style={{ color:"#52b09a" }}>科学脑</span>：基于 AI 模型对体检数据的解读，仅供参考，不构成医疗诊断或治疗建议。如有健康问题，请咨询专业医疗机构。
+                    <div style={{ ...S.mono, fontSize:".65rem", color:"#3a3832", marginBottom:4, letterSpacing:".1em" }}>{t('disclaimer.label')}</div>
+                    <span style={{ color:"#52b09a" }}>Science Brain</span>：{t('disclaimer.science')}
                     <br/>
-                    <span style={{ color:"#c4a265" }}>命理脑</span>：基于传统八字命理学的推演分析，属于文化参考与个人兴趣探索，不具有科学实证效力，不应作为医疗决策依据。
+                    <span style={{ color:"#c4a265" }}>Meta Brain</span>：{t('disclaimer.meta')}
                   </div>
                 </div>
               )}
@@ -1622,8 +1639,8 @@ ${days.map(d => `<div class="day">
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
                       <div style={{ width:10, height:10, borderRadius:"50%", background:"#52b09a" }}/>
                       <div>
-                        <div style={{ ...S.mono, fontSize:".85rem", color:"#52b09a" }}>左脑 · 医学建议</div>
-                        <div style={{ fontSize:".75rem", color:"#3a3832", fontStyle:"italic" }}>Science-Based Recommendations</div>
+                        <div style={{ ...S.mono, fontSize:".85rem", color:"#52b09a" }}>{t('tuning.leftBrain')}</div>
+                        <div style={{ fontSize:".75rem", color:"#3a3832", fontStyle:"italic" }}>{t('tuning.leftBrainSub')}</div>
                       </div>
                     </div>
                     {(dst.life_tuning.medical_advice || []).map((a, i) => (
@@ -1638,8 +1655,8 @@ ${days.map(d => `<div class="day">
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
                       <div style={{ width:10, height:10, borderRadius:"50%", background:"#c4a265" }}/>
                       <div>
-                        <div style={{ ...S.mono, fontSize:".85rem", color:"#c4a265" }}>右脑 · 命理建议</div>
-                        <div style={{ fontSize:".75rem", color:"#3a3832", fontStyle:"italic" }}>Destiny-Based Life Tuning</div>
+                        <div style={{ ...S.mono, fontSize:".85rem", color:"#c4a265" }}>{t('tuning.rightBrain')}</div>
+                        <div style={{ fontSize:".75rem", color:"#3a3832", fontStyle:"italic" }}>{t('tuning.rightBrainSub')}</div>
                       </div>
                     </div>
                     {(dst.life_tuning.destiny_advice || []).map((a, i) => (
@@ -1651,14 +1668,14 @@ ${days.map(d => `<div class="day">
                 </div>
               ) : (
                 <div style={{ textAlign:"center", padding:48, fontSize:".95rem", color:"#3a3832" }}>
-                  请先在「数据中心」启动双脑对撞分析，生成个性化生命微调建议。
+                  {t('tuning.noData')}
                 </div>
               )}
 
               {/* Key dates */}
               {dst?.key_dates?.length > 0 && (
                 <div style={{ ...S.card, marginTop:16 }}>
-                  <div style={S.label}>关键时间节点</div>
+                  <div style={S.label}>{t('tuning.keyDates')}</div>
                   <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:8 }}>
                     {dst.key_dates.map((d, i) => (
                       <div key={i} style={{ padding:"10px 14px", background:"#16161c", borderLeft:"2px solid #d4a840", fontSize:".9rem", color:"#d4a840", lineHeight:1.7 }}>
@@ -1676,7 +1693,7 @@ ${days.map(d => `<div class="day">
             <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 180px)" }}>
               {/* Brain selector */}
               <div style={{ display:"flex", gap:0, marginBottom:12 }}>
-                {[["science","🔬 科学脑","#52b09a"],["destiny","🌟 命理脑","#c4a265"]].map(([id, lb, c]) => (
+                {[["science","🔬 "+t('analysis.scienceBrain'),"#52b09a"],["destiny","🌟 "+t('analysis.metaBrain'),"#c4a265"]].map(([id, lb, c]) => (
                   <button key={id} onClick={() => setChatBrain(id)} style={{
                     padding:"10px 24px", background:chatBrain===id ? c+"15" : "transparent",
                     border: `1px solid ${chatBrain===id ? c+"44" : "rgba(196,162,101,.08)"}`,
@@ -1688,17 +1705,17 @@ ${days.map(d => `<div class="day">
                 <button onClick={() => setChatHistory([])} style={{
                   padding:"8px 16px", background:"transparent", border:"1px solid rgba(196,162,101,.08)",
                   color:"#5e5a52", fontSize:".8rem", cursor:"pointer",
-                }}>清空对话</button>
+                }}>{t('chat.clearChat')}</button>
               </div>
 
               {/* Chat history */}
               <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column", gap:8, padding:"8px 0" }}>
                 {chatHistory.length === 0 && (
                   <div style={{ textAlign:"center", padding:48, color:"#3a3832" }}>
-                    <div style={{ fontSize:"1.2rem", marginBottom:8 }}>选择一个大脑，开始深度对话</div>
+                    <div style={{ fontSize:"1.2rem", marginBottom:8 }}>{t('chat.selectBrain')}</div>
                     <div style={{ fontSize:".85rem" }}>
-                      🔬 科学脑：追问解剖学、生理学、用药、检查建议<br/>
-                      🌟 命理脑：追问五行调节、流年趋势、养生时机
+                      {t('chat.scienceDesc')}<br/>
+                      {t('chat.metaDesc')}
                     </div>
                   </div>
                 )}
@@ -1711,7 +1728,7 @@ ${days.map(d => `<div class="day">
                     maxWidth: "85%",
                   }}>
                     <div style={{ fontSize:".72rem", color: m.role === "user" ? "#c4a265" : m.brain === "science" ? "#52b09a" : "#c4a265", marginBottom:4, ...S.mono }}>
-                      {m.role === "user" ? "你" : m.brain === "science" ? "🔬 科学脑" : "🌟 命理脑"}
+                      {m.role === "user" ? t('chat.you') : m.brain === "science" ? "🔬 "+t('analysis.scienceBrain') : "🌟 "+t('analysis.metaBrain')}
                     </div>
                     <div style={{ fontSize:".9rem", color:"#e0dcd4", lineHeight:1.8, whiteSpace:"pre-wrap" }}>{m.text}</div>
                   </div>
@@ -1732,13 +1749,13 @@ ${days.map(d => `<div class="day">
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
-                  placeholder={chatBrain === "science" ? "向科学脑提问（如：ALT偏高需要做什么进一步检查？）" : "向命理脑提问（如：今年下半年健康运势如何？）"}
+                  placeholder={chatBrain === "science" ? t('chat.sciPlaceholder') : t('chat.metaPlaceholder')}
                   style={{ flex:1, ...S.input, fontSize:".9rem" }}
                 />
                 <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} style={{
                   ...S.btn, padding:"10px 24px", opacity: chatLoading || !chatInput.trim() ? 0.5 : 1,
                   cursor: chatLoading ? "wait" : "pointer",
-                }}>发送</button>
+                }}>{t('chat.send')}</button>
               </div>
             </div>
           )}
@@ -1747,9 +1764,9 @@ ${days.map(d => `<div class="day">
           {tab==="metrics" && (
             <div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-                <div style={{ fontSize:".9rem", color:"#9a9488" }}>{age}岁 · {sex==="M"?"男":"女"}性 — 参考范围已按人口统计学调整</div>
+                <div style={{ fontSize:".9rem", color:"#9a9488" }}>{age}{t('sidebar.age')} · {sex==="M"?t('sidebar.male'):t('sidebar.female')} — {t('metrics.refAdjusted')}</div>
                 <div style={{ ...S.mono, fontSize:".78rem", color:metrics.filter(m=>m.value!=null).length===15?"#52b09a":"#5e5a52" }}>
-                  {metrics.filter(m=>m.value!=null).length}/15 已录入
+                  {metrics.filter(m=>m.value!=null).length}/15 {t('metrics.filled')}
                 </div>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(5, minmax(0, 200px))", gap:10, justifyContent:"center" }}>
@@ -1767,7 +1784,7 @@ ${days.map(d => `<div class="day">
                       }}>
                         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                           <span style={{ fontSize:"1.1rem", color:EC[g.el], fontWeight:600 }}>{g.el}</span>
-                          <span style={{ fontSize:".82rem", color:"#9a9488" }}>{g.label}</span>
+                          <span style={{ fontSize:".82rem", color:"#9a9488" }}>{sysLabel(g.el)}</span>
                         </div>
                         <span style={{ ...S.mono, fontSize:".72rem", color:filledCount===3?"#52b09a":"#5e5a52" }}>
                           {filledCount}/3

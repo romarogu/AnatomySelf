@@ -1,0 +1,187 @@
+{
+  "brand": {
+    "name": "ANATOMYSELF",
+    "tagline": "Decode Your Biological Blueprint",
+    "subtitle": "Where 3,000 years of Eastern wisdom meets modern clinical biomarkers",
+    "hook": "Your lab results show facts. We show you the script.",
+    "footer": "AnatomySelf · Decode Your Biological Blueprint"
+  },
+  "nav": {
+    "dataCenter": "Data Center",
+    "collisionAnalysis": "Life Audit",
+    "lifeTuning": "Life Tuning",
+    "deepChat": "Deep Chat",
+    "biomarkers": "Biomarkers"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Create Account",
+    "username": "Username",
+    "password": "Password",
+    "usernamePh": "Enter your username",
+    "passwordPh": "Enter your password",
+    "loginBtn": "Sign In · Enter",
+    "registerBtn": "Create Account",
+    "fillBoth": "Please fill in both fields",
+    "userExists": "Username already exists",
+    "userNotFound": "User not found",
+    "wrongPassword": "Incorrect password",
+    "networkError": "Network error"
+  },
+  "setup": {
+    "title": "Set Up Your Birth Profile",
+    "welcome": "Welcome",
+    "birthYear": "Birth Year",
+    "month": "Month",
+    "day": "Day",
+    "birthHour": "Birth Hour (24h)",
+    "sex": "Biological Sex",
+    "male": "Male",
+    "female": "Female",
+    "preview": "Live Birth Chart Preview",
+    "yearPillar": "Year",
+    "monthPillar": "Month",
+    "dayPillar": "Day",
+    "hourPillar": "Hour",
+    "dayMaster": "Day Master",
+    "saveBtn": "Save & Enter System →"
+  },
+  "header": {
+    "dualBrain": "Dual-Model Architecture",
+    "logout": "Sign Out"
+  },
+  "sidebar": {
+    "userInfo": "Profile",
+    "male": "Male",
+    "female": "Female",
+    "age": "y/o",
+    "dayMaster": "Day Master",
+    "organScan": "System Scan",
+    "anomalies": "Anomalies",
+    "items": "items",
+    "currentCycle": "Current Cycle",
+    "majorCycle": "Major Cycle",
+    "annualCycle": "Annual Cycle"
+  },
+  "systems": {
+    "hepatic": { "name": "Hepatic / Vitality", "short": "Hepatic", "organ": "Liver · Gallbladder" },
+    "cardiovascular": { "name": "Cardiovascular", "short": "Cardio", "organ": "Heart · Small Intestine" },
+    "digestive": { "name": "Digestive / Metabolic", "short": "Metabolic", "organ": "Spleen · Stomach" },
+    "respiratory": { "name": "Respiratory", "short": "Respiratory", "organ": "Lung · Large Intestine" },
+    "renal": { "name": "Renal / Endocrine", "short": "Renal", "organ": "Kidney · Bladder" }
+  },
+  "systemMap": {
+    "木": "hepatic",
+    "火": "cardiovascular",
+    "土": "digestive",
+    "金": "respiratory",
+    "水": "renal"
+  },
+  "upload": {
+    "pipeline": { "upload": "Upload", "ocr": "OCR", "science": "Science", "destiny": "Meta" },
+    "step1": "Step 1 · Import File",
+    "uploadPrompt": "Upload Lab Report Image",
+    "uploadSub": "Supports PNG / JPG (photo or screenshot)",
+    "uploaded": "Uploaded",
+    "clickReplace": "Click to replace",
+    "ocrRunning": "Multi-modal OCR extracting...",
+    "step2": "Step 2 · OCR Results",
+    "ocrEmpty": "Upload a report or enter biomarkers manually below",
+    "ocrManual": "Please enter your data manually",
+    "launchBtn": "Launch Dual-Brain Analysis",
+    "sciRunning": "Science Brain analyzing...",
+    "dstRunning": "Meta Brain processing...",
+    "metricsTitle": "Current Biomarkers · Standardized",
+    "pending": "Pending",
+    "filled": "filled",
+    "itemsFilled": "biomarkers entered",
+    "allNormal": "all normal",
+    "anomalyCount": "anomalies"
+  },
+  "radar": {
+    "title": "Resonance Radar",
+    "destinyLayer": "● Energetic",
+    "medicalLayer": "◌ Clinical",
+    "alertDot": "◎ Attention",
+    "timeTravel": "☯ Temporal Projection",
+    "backToNow": "Back to current",
+    "mainQi": "Main Qi",
+    "dominant": "Dominant",
+    "receding": "Receding",
+    "dimOverview": "System Overview (click to focus)",
+    "harmony": "Harmony",
+    "attention": "Attention",
+    "focus": "Focus",
+    "clinicalScore": "Clinical",
+    "energeticScore": "Energetic",
+    "divergence": "Divergence",
+    "resonance": "Resonance"
+  },
+  "analysis": {
+    "dualBrainTitle": "Dual-Brain Correlative Analysis",
+    "scienceBrain": "Science Brain",
+    "metaBrain": "Meta Brain",
+    "metaResponse": "Meta Brain · Response",
+    "metaInsight": "Meta Brain · Independent Insight",
+    "selectDimPrompt": "Select a system on the radar or sidebar to view dual-brain correlative analysis",
+    "selectDimDesc": "The radar shows the divergence between your clinical biomarker layer and energetic constitution layer across five biological systems. Click any system to see how the Science Brain and Meta Brain cross-analyze your data.",
+    "globalOverview": "Global Anomaly Overview",
+    "sciFindings": "Science Brain Findings",
+    "metaFindings": "Meta Brain Findings",
+    "noData": "No data",
+    "sciSummary": "Science Brain Summary",
+    "keyDates": "Key Temporal Nodes",
+    "realAnomaly": "Clinical anomaly + energetic weakness — Divergence {dv}%, requires focused attention",
+    "constitutionNote": "Constitutional note — Divergence {dv}%, clinically normal but energetically weak, monitor long-term",
+    "dimNormal": "All biomarkers in this system are within normal range.",
+    "dimWeakConst": "However, your energetic constitution shows only {pct}% in this system — a constitutional weak point. Launch dual-brain analysis for personalized guidance.",
+    "dimHarmony": "Clinical and energetic layers are harmonious in this system. Launch dual-brain analysis for deeper insights."
+  },
+  "reports": {
+    "scienceReport": "Generate Life Blueprint · Science Report",
+    "destinyGuide": "Generate Weekly Energy Defense Guide",
+    "sciReportTitle": "Life Blueprint",
+    "destinyGuideTitle": "Weekly Energy Defense Guide"
+  },
+  "disclaimer": {
+    "label": "DISCLAIMER",
+    "science": "Science Brain: AI-powered interpretation of clinical data. For reference only — does not constitute medical diagnosis or treatment advice. Consult a qualified healthcare provider for medical concerns.",
+    "meta": "Meta Brain: Based on traditional Chinese BaZi metaphysical analysis. Cultural reference and personal exploration only — not scientifically validated and should not inform medical decisions."
+  },
+  "tuning": {
+    "leftBrain": "Left Brain · Clinical Recommendations",
+    "leftBrainSub": "Science-Based Recommendations",
+    "rightBrain": "Right Brain · Energetic Recommendations",
+    "rightBrainSub": "Constitution-Based Life Tuning",
+    "keyDates": "Key Temporal Nodes",
+    "noData": "Please run Dual-Brain Analysis first to generate personalized life tuning recommendations."
+  },
+  "chat": {
+    "selectBrain": "Select a brain to begin deep conversation",
+    "scienceDesc": "Science Brain: Ask about anatomy, physiology, medications, further testing",
+    "metaDesc": "Meta Brain: Ask about elemental balance, temporal trends, wellness timing",
+    "sciPlaceholder": "Ask Science Brain (e.g., What follow-up tests for high ALT?)",
+    "metaPlaceholder": "Ask Meta Brain (e.g., Health outlook for second half of this year?)",
+    "send": "Send",
+    "you": "You",
+    "thinking": "thinking...",
+    "clearChat": "Clear Chat"
+  },
+  "metrics": {
+    "title": "Biomarkers",
+    "refAdjusted": "Reference ranges adjusted by demographics",
+    "filled": "entered",
+    "normal": "Normal",
+    "high": "High ↑",
+    "low": "Low ↓",
+    "pending": "Pending",
+    "refRange": "Ref"
+  },
+  "elements": {
+    "木": "Wood",
+    "火": "Fire",
+    "土": "Earth",
+    "金": "Metal",
+    "水": "Water"
+  }
+}

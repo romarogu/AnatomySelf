@@ -1,0 +1,187 @@
+{
+  "brand": {
+    "name": "ANATOMYSELF",
+    "tagline": "解码你的生命蓝图",
+    "subtitle": "三千年东方智慧与现代临床指标的交汇",
+    "hook": "你的体检报告呈现事实，我们揭示剧本。",
+    "footer": "AnatomySelf · 个人生命实验室"
+  },
+  "nav": {
+    "dataCenter": "数据中心",
+    "collisionAnalysis": "对撞分析",
+    "lifeTuning": "生命微调",
+    "deepChat": "深度对话",
+    "biomarkers": "体检指标"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "username": "用户名",
+    "password": "密码",
+    "usernamePh": "请输入用户名",
+    "passwordPh": "请输入密码",
+    "loginBtn": "登录 · Enter",
+    "registerBtn": "注册新账户",
+    "fillBoth": "请填写用户名和密码",
+    "userExists": "用户名已存在",
+    "userNotFound": "用户不存在",
+    "wrongPassword": "密码错误",
+    "networkError": "网络错误"
+  },
+  "setup": {
+    "title": "设置您的生辰信息",
+    "welcome": "欢迎",
+    "birthYear": "出生年",
+    "month": "月",
+    "day": "日",
+    "birthHour": "出生时辰（24小时制）",
+    "sex": "生理性别",
+    "male": "男",
+    "female": "女",
+    "preview": "实时八字预览",
+    "yearPillar": "年柱",
+    "monthPillar": "月柱",
+    "dayPillar": "日柱",
+    "hourPillar": "时柱",
+    "dayMaster": "日主",
+    "saveBtn": "保存并进入系统 →"
+  },
+  "header": {
+    "dualBrain": "双模型解耦 · DUAL-BRAIN",
+    "logout": "退出登录"
+  },
+  "sidebar": {
+    "userInfo": "用户信息",
+    "male": "男",
+    "female": "女",
+    "age": "岁",
+    "dayMaster": "日主",
+    "organScan": "五脏速扫",
+    "anomalies": "异常",
+    "items": "项",
+    "currentCycle": "大运·流年",
+    "majorCycle": "大运",
+    "annualCycle": "流年"
+  },
+  "systems": {
+    "hepatic": { "name": "肝胆系统", "short": "肝胆", "organ": "肝·胆" },
+    "cardiovascular": { "name": "心血管系统", "short": "心血管", "organ": "心·小肠" },
+    "digestive": { "name": "脾胃代谢", "short": "脾胃", "organ": "脾·胃" },
+    "respiratory": { "name": "呼吸系统", "short": "呼吸", "organ": "肺·大肠" },
+    "renal": { "name": "肾脏内分泌", "short": "肾脏", "organ": "肾·膀胱" }
+  },
+  "systemMap": {
+    "木": "hepatic",
+    "火": "cardiovascular",
+    "土": "digestive",
+    "金": "respiratory",
+    "水": "renal"
+  },
+  "upload": {
+    "pipeline": { "upload": "上传", "ocr": "OCR", "science": "科学脑", "destiny": "命理脑" },
+    "step1": "步骤1 · 文件导入",
+    "uploadPrompt": "上传体检报告截图",
+    "uploadSub": "支持 PNG / JPG（拍照或截图）",
+    "uploaded": "已上传",
+    "clickReplace": "点击更换",
+    "ocrRunning": "多模态 OCR 提取中...",
+    "step2": "步骤2 · OCR 结果",
+    "ocrEmpty": "上传报告或直接在下方手动输入指标",
+    "ocrManual": "请手动输入体检数据",
+    "launchBtn": "启动双脑对撞分析",
+    "sciRunning": "科学大脑分析中...",
+    "dstRunning": "命理大脑对撞中...",
+    "metricsTitle": "当前指标 · 五行标准化",
+    "pending": "待录入",
+    "filled": "已录入",
+    "itemsFilled": "项指标已录入",
+    "allNormal": "全部正常",
+    "anomalyCount": "项异常"
+  },
+  "radar": {
+    "title": "对撞共振雷达",
+    "destinyLayer": "● 命理层",
+    "medicalLayer": "◌ 医学层",
+    "alertDot": "◎ 关注",
+    "timeTravel": "☯ 时空推演",
+    "backToNow": "回到当月",
+    "mainQi": "主气",
+    "dominant": "旺",
+    "receding": "衰",
+    "dimOverview": "五维概览（点击聚焦）",
+    "harmony": "和谐",
+    "attention": "留意",
+    "focus": "重点关注",
+    "clinicalScore": "医学层",
+    "energeticScore": "命理层",
+    "divergence": "偏离度",
+    "resonance": "共振度"
+  },
+  "analysis": {
+    "dualBrainTitle": "双脑对话式关联分析",
+    "scienceBrain": "科学脑",
+    "metaBrain": "命理脑",
+    "metaResponse": "命理脑 · 对撞回应",
+    "metaInsight": "命理脑 · 独立洞察",
+    "selectDimPrompt": "点击雷达或左侧维度，查看双脑关联分析",
+    "selectDimDesc": "雷达展示了五个生理系统上「医学层」与「能量层」的对撞状态。点击任意维度可展开科学脑与命理脑的对话式关联分析。",
+    "globalOverview": "全局异常概览",
+    "sciFindings": "科学脑发现",
+    "metaFindings": "命理脑发现",
+    "noData": "暂无数据",
+    "sciSummary": "科学脑综合判断",
+    "keyDates": "关键时间节点",
+    "realAnomaly": "⚠ 体检异常 + 能量偏弱 — 偏离度 {dv}%，此维度需要重点关注",
+    "constitutionNote": "☯ 先天短板提示 — 偏离度 {dv}%，体检虽正常但能量层偏弱，建议长期留意",
+    "dimNormal": "此系统所有指标均在正常范围内。",
+    "dimWeakConst": "但能量层仅占 {pct}%，属先天偏弱环节。建议启动双脑分析，获取个性化建议。",
+    "dimHarmony": "医学与能量层在此维度较为和谐，可通过启动双脑分析获取更深入的解读。"
+  },
+  "reports": {
+    "scienceReport": "生成生命说明书 · 科学脑报告",
+    "destinyGuide": "生成一周能量防御指南",
+    "sciReportTitle": "生命说明书",
+    "destinyGuideTitle": "一周能量防御指南"
+  },
+  "disclaimer": {
+    "label": "DISCLAIMER · 免责声明",
+    "science": "科学脑：基于 AI 模型对体检数据的解读，仅供参考，不构成医疗诊断或治疗建议。如有健康问题，请咨询专业医疗机构。",
+    "meta": "命理脑：基于传统八字命理学的推演分析，属于文化参考与个人兴趣探索，不具有科学实证效力，不应作为医疗决策依据。"
+  },
+  "tuning": {
+    "leftBrain": "左脑 · 医学建议",
+    "leftBrainSub": "Science-Based Recommendations",
+    "rightBrain": "右脑 · 命理建议",
+    "rightBrainSub": "Constitution-Based Life Tuning",
+    "keyDates": "关键时间节点",
+    "noData": "请先在「数据中心」启动双脑对撞分析，生成个性化生命微调建议。"
+  },
+  "chat": {
+    "selectBrain": "选择一个大脑，开始深度对话",
+    "scienceDesc": "🔬 科学脑：追问解剖学、生理学、用药、检查建议",
+    "metaDesc": "🌟 命理脑：追问五行调节、流年趋势、养生时机",
+    "sciPlaceholder": "向科学脑提问（如：ALT偏高需要做什么进一步检查？）",
+    "metaPlaceholder": "向命理脑提问（如：今年下半年健康运势如何？）",
+    "send": "发送",
+    "you": "你",
+    "thinking": "思考中...",
+    "clearChat": "清空对话"
+  },
+  "metrics": {
+    "title": "体检指标",
+    "refAdjusted": "参考范围已按人口统计学调整",
+    "filled": "已录入",
+    "normal": "正常",
+    "high": "偏高↑",
+    "low": "偏低↓",
+    "pending": "待录入",
+    "refRange": "参考"
+  },
+  "elements": {
+    "木": "木",
+    "火": "火",
+    "土": "土",
+    "金": "金",
+    "水": "水"
+  }
+}
