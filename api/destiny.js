@@ -147,7 +147,7 @@ ${findings || '无明显异常'}
 
     // Add language instruction
     const langInstruction = isEn
-      ? '\n\nIMPORTANT: Respond entirely in English. Translate all Chinese metaphysical terms with original Chinese in parentheses, e.g. "Wood Element (木)", "Day Master (日主)". All analysis text, advice, and temporal outlook must be in English.'
+      ? '\n\nCRITICAL LANGUAGE INSTRUCTION: You MUST respond entirely in English. For organ_wuxing field, use ONLY the Chinese element character (木/火/土/金/水). For all text fields (current_forces, evolution_path, prevention, temporal_outlook, etc), write fluent English. Use original Chinese terms naturally in parentheses where helpful, e.g. "the Wood element (木) governs the Liver". Do NOT output any code, variable names, function calls, or system references like "systemMap" or ".organ". Write as a wise counselor, not a programmer.'
       : '';
 
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {

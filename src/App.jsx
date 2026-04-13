@@ -98,6 +98,22 @@ const WX_GROUPS = [
   { el:"水", sysKey:"renal", keys:["Cr","UA","VitD"] },
 ];
 
+const RR_EN = {
+  ALT:"ALT (Alanine Aminotransferase)", AST:"AST (Aspartate Aminotransferase)", TBIL:"Total Bilirubin",
+  SBP:"Systolic BP", DBP:"Diastolic BP", RHR:"Resting Heart Rate",
+  FBG:"Fasting Blood Glucose", HbA1c:"HbA1c", TG:"Triglycerides",
+  FVC:"Forced Vital Capacity", SpO2:"SpO2", LDL_C:"LDL Cholesterol",
+  Cr:"Serum Creatinine", UA:"Uric Acid", VitD:"25-OH Vitamin D",
+};
+// Short English names for compact display
+const RR_EN_SHORT = {
+  ALT:"ALT", AST:"AST", TBIL:"Bilirubin",
+  SBP:"Systolic", DBP:"Diastolic", RHR:"Heart Rate",
+  FBG:"Glucose", HbA1c:"HbA1c", TG:"Triglycerides",
+  FVC:"FVC", SpO2:"SpO2", LDL_C:"LDL-C",
+  Cr:"Creatinine", UA:"Uric Acid", VitD:"Vitamin D",
+};
+
 const RR = {
   // ── 木 · 肝胆 ──
   ALT:{u:"U/L",cn:"谷丙转氨酶",o:"木",r:[{a1:0,a2:12,s:"A",l:5,h:30,n:"儿童肝脏酶基线低"},{a1:13,a2:17,s:"M",l:7,h:35,n:"青春期男性轻度升高属正常"},{a1:13,a2:17,s:"F",l:5,h:30,n:"青春期女性雌激素保护肝脏"},{a1:18,a2:59,s:"M",l:7,h:40,n:"成年男性标准"},{a1:18,a2:59,s:"F",l:7,h:35,n:"成年女性上限略低"},{a1:60,a2:120,s:"A",l:5,h:40,n:"老年肝代谢下降"}]},
@@ -661,6 +677,10 @@ function Dashboard({ user, setUser, onLogout }) {
   const sysLabel = (el) => t(`systems.${t(`systemMap.${el}`)}.name`);
   const sysOrgan = (el) => t(`systems.${t(`systemMap.${el}`)}.organ`);
   const elName = (el) => t(`elements.${el}`);
+  // Metric display name based on locale
+  const mName = (key) => locale === 'en' ? (RR_EN_SHORT[key] || key) : (RR[key]?.cn || key);
+  const mNameFull = (key) => locale === 'en' ? (RR_EN[key] || key) : (RR[key]?.cn || key);
+  const statusText = (st) => locale === 'en' ? (st === '偏高' ? 'High' : st === '偏低' ? 'Low' : st) : st;
   // Ensure all 15 standard slots exist, merging any saved data
   const initMetrics = useMemo(() => {
     const saved = user.metrics || [];
@@ -1074,9 +1094,12 @@ ${days.map(d => `<div class="day">
             </div>)}
           </div>
           <span style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}{t('sidebar.age')}</span>
-          <button onClick={toggleLang} style={{ background:"transparent", border:"1px solid rgba(196,162,101,.15)", color:"#c4a265", padding:"4px 10px", fontSize:".72rem", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace", borderRadius:2 }}>
-            {locale === 'en' ? '中文' : 'EN'}
-          </button>
+          <div onClick={toggleLang} style={{ cursor:"pointer", display:"flex", alignItems:"center", gap:3, padding:"3px 8px", borderRadius:10, background:"rgba(196,162,101,.04)", border:"1px solid rgba(196,162,101,.08)", transition:"all .2s" }}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.2)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.08)";}}>
+            <span style={{ fontSize:".65rem", color:locale==='en'?"#c4a265":"#5e5a52", fontFamily:"'JetBrains Mono',monospace" }}>EN</span>
+            <span style={{ fontSize:".55rem", color:"#3a3832" }}>|</span>
+            <span style={{ fontSize:".65rem", color:locale==='zh'?"#c4a265":"#5e5a52" }}>中</span>
+          </div>
           <button onClick={onLogout} style={{ background:"rgba(196,64,64,.06)", border:"1px solid rgba(196,64,64,.2)", color:"#c44040", padding:"4px 14px", fontSize:".8rem", cursor:"pointer", fontFamily:"'Noto Serif SC',serif", borderRadius:2, transition:"all .2s" }}
             onMouseEnter={e=>{e.target.style.background="rgba(196,64,64,.15)";}} onMouseLeave={e=>{e.target.style.background="rgba(196,64,64,.06)";}}>
             {t('header.logout')}
@@ -1113,7 +1136,7 @@ ${days.map(d => `<div class="day">
           {anoms.length>0 && (
             <div style={{ borderTop:"1px solid rgba(196,64,64,.15)", paddingTop:8 }}>
               <div style={{ ...S.mono, fontSize:".72rem", color:"#c44040", letterSpacing:".1em" }}>⚠ {t('sidebar.anomalies')} {anoms.length} {t('sidebar.items')}</div>
-              {anoms.map(a => <div key={a.key} style={{ fontSize:".8rem", color:"#c44040", marginTop:3 }}>{a.ref.cn} {a.st}</div>)}
+              {anoms.map(a => <div key={a.key} style={{ fontSize:".8rem", color:"#c44040", marginTop:3 }}>{mName(a.key)} {statusText(a.st)}</div>)}
             </div>
           )}
 
@@ -1235,14 +1258,14 @@ ${days.map(d => `<div class="day">
                           <div key={k} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:5, padding:"3px 0" }}>
                             <div style={{ flex:1, minWidth:0 }}>
                               <span style={{ fontSize:".82rem", color: hasVal ? "#d0ccc4" : "#6a6560" }}>
-                                {ref?.cn||k}
+                                {mName(k)}
                               </span>
                               <sup style={{ fontSize:".55rem", color:"#5e5a52", marginLeft:2 }}>{k.replace("_","-")}</sup>
                             </div>
                             <input
                               type="number" step="0.1" inputMode="decimal"
                               value={hasVal ? m.value : ""}
-                              placeholder="待录入"
+                              placeholder={t('upload.pending')}
                               onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
                               style={{
                                 width:72, background:"#0c0c0f", padding:"5px 4px", outline:"none", textAlign:"center",
@@ -1809,7 +1832,7 @@ ${days.map(d => `<div class="day">
                             {/* Label */}
                             <div style={{ flex:1, minWidth:0 }}>
                               <span style={{ fontSize:".88rem", color: hasVal ? "#d0ccc4" : "#6a6560" }}>
-                                {ref.cn}
+                                {mName(k)}
                               </span>
                               <sup style={{ fontSize:".58rem", color:"#5e5a52", marginLeft:2, verticalAlign:"super", fontFamily:"'JetBrains Mono',monospace" }}>
                                 {k.replace("_","-")}
@@ -1819,7 +1842,7 @@ ${days.map(d => `<div class="day">
                             <input
                               type="number" step="0.1" inputMode="decimal"
                               value={hasVal ? m.value : ""}
-                              placeholder="待录入"
+                              placeholder={t('metrics.pending')}
                               onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
                               style={{
                                 width:68, background:"#0c0c0f", padding:"5px 4px", outline:"none", textAlign:"center",
@@ -1848,7 +1871,7 @@ ${days.map(d => `<div class="day">
                           const ref = gR(k, age, sex);
                           return ref ? (
                             <div key={k} style={{ fontSize:".68rem", color:"#4a4a44", lineHeight:1.5 }}>
-                              {ref.cn} {ref.l}–{ref.h} {ref.u}
+                              {mName(k)} {ref.l}–{ref.h} {ref.u}
                             </div>
                           ) : null;
                         })}
