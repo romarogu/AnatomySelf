@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import * as d3 from "d3";
 import { useI18n } from "./i18n/index.jsx";
-import { generateLifeBlueprintPDF } from "./LifeBlueprintPDF.jsx";
+import { generateLifeBlueprintPDF, generateWeeklyGuidePDF } from "./ReportGenerator.jsx";
 import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiLogout, apiSaveUser, apiChat } from "./api.js";
 
 // ════════════════════════════════════════
@@ -912,166 +912,198 @@ function Dashboard({ user, setUser, onLogout }) {
     setChatLoading(false);
   }, [chatInput, chatBrain, chatLoading, chatHistory, age, sex, bazi, dy, ln, sci, dst, locale]);
 
-  // ── 科学脑报告：生命说明书 ──
+  // ── Helper: open report in new window with print prompt ──
+  const openReport = useCallback((title, htmlContent) => {
+    const w = window.open('', '_blank');
+    if (!w) { alert(locale==='en' ? 'Please allow pop-ups to view your report.' : '请允许弹出窗口以查看报告。'); return; }
+    w.document.write(htmlContent);
+    w.document.close();
+  }, [locale]);
+
+  // ── SVG radar string for embedding in reports ──
+  const radarSVG = useMemo(() => {
+    const cx=120,cy=120,r=90,order=["火","土","金","水","木"];
+    const angles=order.map((_,i)=>(i*2*Math.PI/5)-Math.PI/2);
+    const colors={"火":"#c45a30","土":"#a08a50","金":"#9898a8","水":"#3a6a9a","木":"#4a8a4a"};
+    const labels = locale==='en' ? ["Cardio","Metabolic","Respiratory","Renal","Hepatic"] : ["火·心","土·脾","金·肺","水·肾","木·肝"];
+    const grid=[1,.75,.5,.25].map(s=>angles.map(a=>`${cx+r*s*Math.cos(a)},${cy+r*s*Math.sin(a)}`).join(' ')).map(p=>`<polygon points="${p}" fill="none" stroke="rgba(196,162,101,.08)" stroke-width=".5"/>`).join('');
+    const destPts=order.map((e,i)=>`${cx+r*(destWX[e]||50)/100*Math.cos(angles[i])},${cy+r*(destWX[e]||50)/100*Math.sin(angles[i])}`).join(' ');
+    const medPts=order.map((e,i)=>`${cx+r*(medWX[e]||50)/100*Math.cos(angles[i])},${cy+r*(medWX[e]||50)/100*Math.sin(angles[i])}`).join(' ');
+    const lbls=order.map((e,i)=>{const x=cx+(r+18)*Math.cos(angles[i]),y=cy+(r+18)*Math.sin(angles[i]);return `<text x="${x}" y="${y+4}" text-anchor="middle" font-size="9" fill="${colors[e]}" font-family="'Noto Serif SC',serif">${labels[i]}</text>`;}).join('');
+    return `<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" style="width:220px;height:220px">${grid}<polygon points="${destPts}" fill="rgba(196,162,101,.06)" stroke="#c4a265" stroke-width="1.2" opacity=".75"/><polygon points="${medPts}" fill="rgba(224,220,212,.04)" stroke="#e0dcd4" stroke-width="1" stroke-dasharray="4 2" opacity=".55"/>${lbls}</svg>`;
+  }, [destWX, medWX, locale]);
+
+  // ── Life Blueprint Report ──
   const generateScienceReport = useCallback(() => {
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
-    const filledM = metrics.filter(m => m.value != null);
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AnatomySelf · 生命说明书</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+    const now=new Date();
+    const d=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+    const id='AS-'+Date.now().toString(36).toUpperCase();
+    const isEn=locale==='en';
+    const sexL=isEn?(sex==='M'?'Male':'Female'):(sex==='M'?'男':'女');
+
+    // Build impact rows
+    const impacts=WX_GROUPS.map(g=>{
+      const si=(sci?.items||[]).find(it=>it.organ_system===g.el);
+      const di=(dst?.collision_items||[]).find(it=>it.organ_wuxing===g.el);
+      if(!si&&!di) return '';
+      const isCrit=si?.severity==='critical'||si?.severity==='severe';
+      return `<div class="impact" style="border-left-color:${EC[g.el]};${isCrit?'border-left-width:3px;':''}">
+<div class="impact-hdr"><span class="el" style="color:${EC[g.el]}">${isEn?elName(g.el):g.el}</span> <span class="sys">${sysLabel(g.el)}</span>${si?.severity?`<span class="sev ${isCrit?'crit':''}">${si.severity.toUpperCase()}</span>`:''}</div>
+<div class="impact-body"><div class="col-l"><div class="col-tag bio">CLINICAL</div><p>${si?.clinical_fact||si?.physiological_analysis||'—'}</p>${si?.recommendation?`<div class="act bio-act">→ ${si.recommendation}</div>`:''}</div>
+<div class="col-r"><div class="col-tag meta">ENERGETIC</div><p>${di?.current_forces||'—'}</p>${di?.risk_window?`<div class="rw">⏱ ${di.risk_window}</div>`:''}${di?.prevention?`<div class="act meta-act">→ ${di.prevention}</div>`:''}</div></div></div>`;
+    }).join('');
+
+    // Metrics mini-table
+    const mrows=metrics.filter(m=>m.value!=null).map(m=>{
+      const ref=gR(m.key,age,sex);if(!ref)return '';
+      const inR=m.value>=ref.l&&m.value<=ref.h;
+      return `<tr><td class="mn">${isEn?mNameFull(m.key):ref.cn} <span class="code">${m.key}</span></td><td class="mv ${inR?'ok':'bad'}">${m.value}</td><td class="mu">${ref.u}</td></tr>`;
+    }).join('');
+
+    const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AnatomySelf · Life Blueprint</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#08080a;color:#e0dcd4;font-family:'Noto Serif SC',serif;padding:40px;min-height:100vh}
-.container{max-width:680px;margin:0 auto}
-.header{text-align:center;padding:40px 0 30px;border-bottom:1px solid rgba(196,162,101,.12)}
-.header h1{font-size:1.8rem;font-weight:300;letter-spacing:.2em;color:#c4a265}
-.header .sub{font-size:.85rem;color:#5e5a52;margin-top:8px;letter-spacing:.15em}
-.header .date{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#3a3832;margin-top:12px}
-.section{margin:28px 0;padding:20px 0;border-bottom:1px solid rgba(196,162,101,.06)}
-.section-title{font-size:.72rem;font-family:'JetBrains Mono',monospace;color:#6a5a35;letter-spacing:.2em;margin-bottom:14px}
-.wx-group{display:flex;gap:6px;margin-bottom:12px;align-items:center}
-.wx-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.wx-label{font-size:.9rem;width:80px}
-.metric-row{display:flex;justify-content:space-between;padding:6px 12px;margin:3px 0;background:#16161c}
-.metric-name{font-size:.88rem}
-.metric-val{font-family:'JetBrains Mono',monospace;font-size:.88rem}
-.normal{color:#52b09a}.abnormal{color:#c44040}
-.summary-box{padding:16px 20px;background:rgba(82,176,154,.04);border:1px solid rgba(82,176,154,.1);margin:16px 0;line-height:1.8;font-size:.88rem;color:#9a9488}
-.item-card{padding:14px 16px;background:#16161c;margin:8px 0;border-left:3px solid #52b09a}
-.item-title{font-size:.95rem;color:#e0dcd4;margin-bottom:6px}
-.item-body{font-size:.85rem;color:#9a9488;line-height:1.8}
-.item-rec{font-size:.82rem;color:#52b09a;margin-top:6px}
-.footer{text-align:center;padding:30px 0;font-size:.7rem;color:#3a3832;border-top:1px solid rgba(196,162,101,.06);margin-top:30px}
-.disclaimer{font-size:.7rem;color:#4a4a44;line-height:1.7;padding:12px 16px;background:rgba(196,162,101,.02);border:1px solid rgba(196,162,101,.06);margin-top:20px}
-@media print{body{padding:20px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-</style></head><body><div class="container">
-<div class="header">
-<div style="font-size:.75rem;color:#3a3832;letter-spacing:.3em">ANATOMYSELF</div>
-<h1>生 命 说 明 书</h1>
-<div class="sub">${user.username} · ${age}y/o ${sex==="M"?"Male":"Female"} · Day Master ${bazi.dm}(${bazi.dme})</div>
-<div class="date">${dateStr} · 大运${dy.lbl} · 流年${targetLN.lbl}</div>
+body{background:#08080a;color:#e0dcd4;font-family:'Noto Serif SC','Cormorant Garamond',serif;font-size:13px;line-height:1.6}
+.page{max-width:760px;margin:0 auto;padding:40px 48px;position:relative}
+.print-bar{background:#16161c;padding:10px 20px;text-align:center;font-size:12px;color:#c4a265;font-family:'JetBrains Mono',monospace;cursor:pointer;border-bottom:1px solid rgba(196,162,101,.1)}
+.print-bar:hover{background:#1a1a22}
+@media print{.print-bar{display:none}body{padding:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+/* Header */
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid rgba(196,162,101,.12);padding-bottom:16px;margin-bottom:24px}
+.brand{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:#c4a265;letter-spacing:4px}
+.brand-sub{font-size:10px;color:#5e5a52;letter-spacing:2px;margin-top:2px}
+.hdr-r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#5e5a52;line-height:1.8}
+/* Sentinel */
+.sentinel{border-left:3px solid #c4a265;padding:12px 16px;background:#16161c;font-size:14px;color:#e0dcd4;line-height:1.7;margin-bottom:20px}
+/* Layout: radar + metrics side by side */
+.top-row{display:flex;gap:24px;margin-bottom:20px;align-items:flex-start}
+.radar-col{flex:0 0 220px;text-align:center}
+.metrics-col{flex:1}
+table{width:100%;border-collapse:collapse}
+tr{border-bottom:1px solid rgba(196,162,101,.04)}
+td{padding:3px 6px}
+.mn{font-size:11px;color:#d0ccc4}.code{font-size:8px;color:#5e5a52}
+.mv{font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right}
+.mu{font-size:9px;color:#3a3832;text-align:right}
+.ok{color:#52b09a}.bad{color:#c44040}
+/* Section */
+.sec{font-family:'JetBrains Mono',monospace;font-size:9px;color:#6a5a35;letter-spacing:3px;margin:20px 0 10px}
+/* Impact cards */
+.impact{border-left:2px solid #c4a265;background:#16161c;margin-bottom:8px;break-inside:avoid}
+.impact-hdr{padding:8px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(196,162,101,.06)}
+.el{font-size:14px;font-weight:600}.sys{font-size:11px;color:#9a9488}
+.sev{font-family:'JetBrains Mono',monospace;font-size:8px;padding:1px 6px;background:rgba(212,168,64,.1);color:#d4a840;margin-left:auto}
+.sev.crit{background:rgba(196,64,64,.1);color:#c44040}
+.impact-body{display:flex}
+.col-l,.col-r{flex:1;padding:10px 14px}
+.col-l{border-right:1px solid rgba(196,162,101,.06)}
+.col-tag{font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:2px;margin-bottom:6px}
+.bio{color:#52b09a}.meta{color:#c4a265}
+.impact-body p{font-size:11px;color:#d0ccc4;line-height:1.7}
+.act{font-size:10px;margin-top:4px}.bio-act{color:#52b09a}.meta-act{color:#c4a265}
+.rw{font-size:9px;color:#d4a840;margin:3px 0}
+/* Temporal */
+.date-item{font-size:11px;color:#d4a840;margin-bottom:4px;line-height:1.5}
+/* Disclaimer */
+.disc{font-size:9px;color:#4a4a44;line-height:1.6;padding:10px 14px;border-left:1px solid rgba(196,162,101,.1);margin-top:20px}
+.ftr{text-align:center;font-size:8px;color:#3a3832;margin-top:24px;padding-top:12px;border-top:1px solid rgba(196,162,101,.06)}
+</style></head><body>
+<div class="print-bar" onclick="window.print()">⬇ ${isEn?'Click here or press Ctrl+P / Cmd+P to save as PDF':'点击此处或按 Ctrl+P / Cmd+P 保存为 PDF'}</div>
+<div class="page">
+<div class="hdr">
+<div><div class="brand">ANATOMYSELF</div><div class="brand-sub">${isEn?'LIFE BLUEPRINT':'生命蓝图'}</div></div>
+<div class="hdr-r">${user.username} · ${age}${isEn?'y/o':'岁'} ${sexL}<br>${isEn?'Day Master':'日主'}: ${bazi.dm}(${bazi.dme}) · ${dy.lbl} · ${targetLN.lbl}<br>ID: ${id} · ${d}</div>
 </div>
 
-<div class="section">
-<div class="section-title">VITAL SIGNS · 生命体征概览</div>
-${WX_GROUPS.map(g => {
-  const items = g.keys.map(k => {
-    const m = metrics.find(x=>x.key===k);
-    const ref = gR(k,age,sex);
-    if(!ref) return '';
-    const hasVal = m?.value != null;
-    const inR = hasVal && m.value>=ref.l && m.value<=ref.h;
-    return `<div class="metric-row"><span class="metric-name">${ref.cn} <span style="font-size:.65rem;color:#5e5a52">${k}</span></span><span class="metric-val ${hasVal?(inR?'normal':'abnormal'):''}">${hasVal?m.value:'—'} <span style="font-size:.68rem;color:#3a3832">${ref.u}</span></span></div>`;
-  }).join('');
-  return `<div style="margin-bottom:16px"><div class="wx-group"><div class="wx-dot" style="background:${EC[g.el]}"></div><div class="wx-label" style="color:${EC[g.el]}">${g.el} · ${sysLabel(g.el)}</div></div>${items}</div>`;
-}).join('')}
-</div>
+${(sci?.sentinel||sci?.summary)?`<div class="sentinel">${sci.sentinel||sci.summary}</div>`:''}
 
-${sci?.items?.length ? `<div class="section">
-<div class="section-title">ANALYSIS · 科学脑深度解读</div>
-${sci.items.map(it => `<div class="item-card" style="border-color:${EC[it.organ_system]||'#52b09a'}">
-<div class="item-title">${it.metric_cn} <span style="font-size:.75rem;color:${EC[it.organ_system]}">${it.organ_system}</span></div>
-<div class="item-body">${it.physiological_analysis}</div>
-${it.recommendation ? `<div class="item-rec">💡 ${it.recommendation}</div>` : ''}
-</div>`).join('')}
-</div>` : ''}
+<div class="top-row">
+<div class="radar-col">${radarSVG}<div style="font-size:8px;color:#3a3832;margin-top:6px;font-family:'JetBrains Mono',monospace">● ${isEn?'Energetic':'能量'} ◌ ${isEn?'Clinical':'临床'}</div></div>
+<div class="metrics-col">
+<div class="sec">${isEn?'CLINICAL BIOMARKERS':'临床指标'}</div>
+<table>${mrows}</table>
+</div></div>
 
-${sci?.summary ? `<div class="summary-box">📋 ${sci.summary}</div>` : ''}
+${impacts?`<div class="sec">IMPACT ANALYSIS</div>${impacts}`:''}
 
-<div class="disclaimer">⚕ 本报告由 AI 模型基于体检数据生成，仅供健康参考，不构成医疗诊断或治疗建议。如有健康问题，请咨询专业医疗机构。</div>
+${dst?.temporal_outlook?`<div class="sec">TEMPORAL OUTLOOK</div><p style="font-size:11px;color:#9a9488;line-height:1.7">${dst.temporal_outlook}</p>`:''}
 
-<div class="footer">
-ANATOMYSELF · 个人生命实验室<br>
-Where anatomical precision meets celestial cartography
-</div>
+${dst?.key_dates?.length?`<div class="sec">${isEn?'KEY TEMPORAL NODES':'关键时间节点'}</div>${dst.key_dates.map(x=>`<div class="date-item">▪ ${x}</div>`).join('')}`:''}
+
+<div class="disc">${isEn?'Science Brain: AI interpretation for reference only — not medical advice. Meta Brain: Traditional BaZi analysis — cultural reference only.':'科学脑：AI解读仅供参考。命理脑：传统命理推演，属文化参考。'}</div>
+<div class="ftr">ANATOMYSELF · ${isEn?'Decode Your Biological Blueprint':'解码你的生命蓝图'} · ${d}</div>
 </div></body></html>`;
-    const blob = new Blob([html], {type:'text/html'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `AnatomySelf_生命说明书_${dateStr}.html`; a.click();
-    URL.revokeObjectURL(url);
-  }, [metrics, sci, age, sex, user, bazi, dy, targetLN]);
+    openReport('Life Blueprint', html);
+  }, [metrics, sci, dst, age, sex, user, bazi, dy, targetLN, locale, radarSVG, colls]);
 
-  // ── 命理脑报告：一周能量防御指南 ──
+  // ── Weekly Energy Defense Guide ──
   const generateDestinyGuide = useCallback(() => {
-    const now = new Date();
-    const weekDays = ["日","一","二","三","四","五","六"];
-    // 生成未来7天的五行能量分布
-    const days = Array.from({length:7}, (_, i) => {
-      const d = new Date(now.getTime() + i * 864e5);
-      const ds = SC[md(Math.round((d - new Date(2000,0,7))/864e5), 10)];
-      const db = BC[md(Math.round((d - new Date(2000,0,7))/864e5), 12)];
-      const dayEl = TG[ds][0];
-      // 日干与日主的关系
-      const rel = dayEl === bazi.dme ? "比肩" :
-                  GEN[bazi.dme] === dayEl ? "食伤" :
-                  CTL[bazi.dme] === dayEl ? "财星" :
-                  GEN[dayEl] === bazi.dme ? "印星" : "官杀";
-      const energy = dayEl === bazi.dme ? 90 :
-                     GEN[dayEl] === bazi.dme ? 80 :
-                     GEN[bazi.dme] === dayEl ? 60 :
-                     CTL[dayEl] === bazi.dme ? 30 : 45;
-      return {
-        date: `${d.getMonth()+1}/${d.getDate()}`,
-        weekday: weekDays[d.getDay()],
-        gan: ds, zhi: db, el: dayEl, rel, energy,
-        advice: energy >= 80 ? "宜进取" : energy >= 60 ? "宜平稳" : "宜守护",
-        organ: sysOrgan(dayEl),
-      };
+    const now=new Date();
+    const isEn=locale==='en';
+    const weekDays=isEn?["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]:["日","一","二","三","四","五","六"];
+    const elEn={"木":"Wood","火":"Fire","土":"Earth","金":"Metal","水":"Water"};
+    const days=Array.from({length:7},(_,i)=>{
+      const dd=new Date(now.getTime()+i*864e5);
+      const delta=Math.round((dd-new Date(2000,0,7))/864e5);
+      const ds=SC[md(delta,10)],db=BC[md(delta,12)];
+      const dayEl=TG[ds][0];
+      const rel=dayEl===bazi.dme?(isEn?"Companion":"比肩"):GEN[bazi.dme]===dayEl?(isEn?"Output":"食伤"):CTL[bazi.dme]===dayEl?(isEn?"Wealth":"财星"):GEN[dayEl]===bazi.dme?(isEn?"Resource":"印星"):(isEn?"Authority":"官杀");
+      const energy=dayEl===bazi.dme?90:GEN[dayEl]===bazi.dme?80:GEN[bazi.dme]===dayEl?60:CTL[dayEl]===bazi.dme?30:45;
+      return {date:`${dd.getMonth()+1}/${dd.getDate()}`,wd:weekDays[dd.getDay()],gan:ds,zhi:db,el:dayEl,elLabel:isEn?elEn[dayEl]:dayEl,rel,energy,
+        advice:energy>=80?(isEn?"Advance":"宜进取"):energy>=60?(isEn?"Steady":"宜平稳"):(isEn?"Protect":"宜守护"),
+        organ:sysOrgan(dayEl)};
     });
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AnatomySelf · 一周能量防御指南</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+    const d1=days[0].date,d7=days[6].date;
+    const energySVG=`<svg viewBox="0 0 320 80" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:80px;margin:12px 0">
+${days.map((d,i)=>{const x=i*320/7+320/14,h=d.energy*0.6,y=70-h,c=d.energy>=80?'#52b09a':d.energy>=60?'#d4a840':'#c44040';
+return `<rect x="${x-12}" y="${y}" width="24" height="${h}" rx="2" fill="${c}" opacity=".6"/><text x="${x}" y="78" text-anchor="middle" font-size="8" fill="#5e5a52" font-family="'JetBrains Mono',monospace">${d.wd}</text>`;}).join('')}</svg>`;
+
+    const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AnatomySelf · Energy Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#08080a;color:#e0dcd4;font-family:'Noto Serif SC',serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-.card{width:400px;padding:36px 32px;background:linear-gradient(160deg,#0f1014,#16161c,#0f1014);border:1px solid rgba(196,162,101,.12);position:relative;overflow:hidden}
+.print-bar{position:fixed;top:0;left:0;right:0;background:#16161c;padding:8px;text-align:center;font-size:11px;color:#c4a265;font-family:'JetBrains Mono',monospace;cursor:pointer;z-index:10}
+.print-bar:hover{background:#1a1a22}
+@media print{.print-bar{display:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.card{width:420px;padding:32px 28px;background:linear-gradient(160deg,#0f1014,#16161c,#0f1014);border:1px solid rgba(196,162,101,.12);position:relative;overflow:hidden}
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#4a8a4a,#c45a30,#a08a50,#9898a8,#3a6a9a)}
-.title{text-align:center;margin-bottom:24px}
-.title h2{font-size:1.1rem;font-weight:300;color:#c4a265;letter-spacing:.25em}
-.title .sub{font-size:.72rem;color:#5e5a52;margin-top:6px;font-family:'JetBrains Mono',monospace}
-.day{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(196,162,101,.05)}
-.day:last-child{border:none}
-.day-date{width:48px;text-align:center}
-.day-date .d{font-size:.88rem;color:#9a9488}
-.day-date .w{font-size:.65rem;color:#5e5a52;font-family:'JetBrains Mono',monospace}
-.day-el{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:600}
-.day-info{flex:1}
-.day-info .gz{font-size:.82rem;color:#e0dcd4}
-.day-info .rel{font-size:.7rem;color:#5e5a52;margin-top:2px}
-.day-bar{width:80px}
-.day-bar .bar{height:3px;background:#08080a;border-radius:2px}
-.day-bar .fill{height:100%;border-radius:2px;transition:width .4s}
-.day-advice{font-size:.72rem;width:50px;text-align:right}
-.footer{text-align:center;margin-top:20px;font-size:.6rem;color:#3a3832;letter-spacing:.1em}
-.dm{text-align:center;margin-bottom:16px;padding:8px 12px;background:rgba(196,162,101,.03);border:1px solid rgba(196,162,101,.06)}
-.dm span{font-size:.82rem;color:#c4a265}
-.disclaimer{font-size:.58rem;color:#3a3832;text-align:center;margin-top:14px;line-height:1.5}
-</style></head><body><div class="card">
-<div class="title">
-<div style="font-size:.6rem;color:#3a3832;letter-spacing:.3em;margin-bottom:4px">ANATOMYSELF</div>
-<h2>一周能量防御指南</h2>
-<div class="sub">${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} – ${new Date(now.getTime()+6*864e5).getMonth()+1}/${new Date(now.getTime()+6*864e5).getDate()}</div>
-</div>
-<div class="dm">日主 <span>${bazi.dm}(${bazi.dme})</span> · 大运 <span>${dy.lbl}</span> · ${targetLN.lbl}年</div>
-${days.map(d => `<div class="day">
-<div class="day-date"><div class="d">${d.date}</div><div class="w">周${d.weekday}</div></div>
-<div class="day-el" style="background:${EC[d.el]}22;color:${EC[d.el]}">${d.el}</div>
-<div class="day-info"><div class="gz">${d.gan}${d.zhi} <span style="font-size:.7rem;color:${EC[d.el]}">${d.organ}</span></div><div class="rel">${d.rel}</div></div>
-<div class="day-bar"><div class="bar"><div class="fill" style="width:${d.energy}%;background:${d.energy>=80?'#52b09a':d.energy>=60?'#d4a840':'#c44040'}"></div></div></div>
-<div class="day-advice" style="color:${d.energy>=80?'#52b09a':d.energy>=60?'#d4a840':'#c44040'}">${d.advice}</div>
+.title{text-align:center;margin-bottom:20px}
+.title h2{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:300;color:#c4a265;letter-spacing:4px}
+.title .sub{font-size:10px;color:#5e5a52;margin-top:4px;font-family:'JetBrains Mono',monospace}
+.dm{text-align:center;margin-bottom:16px;padding:6px 12px;background:rgba(196,162,101,.03);border:1px solid rgba(196,162,101,.06);font-size:11px;color:#9a9488}
+.dm span{color:#c4a265}
+.day{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(196,162,101,.04)}
+.day:last-of-type{border:none}
+.day-d{width:42px;text-align:center}.day-d .d{font-size:12px;color:#9a9488}.day-d .w{font-size:9px;color:#5e5a52;font-family:'JetBrains Mono',monospace}
+.day-el{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.day-info{flex:1}.day-info .gz{font-size:12px;color:#e0dcd4}.day-info .rel{font-size:9px;color:#5e5a52;margin-top:1px}
+.day-e{width:50px;text-align:right;font-size:11px;font-family:'JetBrains Mono',monospace}
+.disc{font-size:8px;color:#3a3832;text-align:center;margin-top:14px;line-height:1.4}
+.ftr{text-align:center;margin-top:14px;font-size:7px;color:#2a2a2a;letter-spacing:1px}
+</style></head><body>
+<div class="print-bar" onclick="window.print()">⬇ ${isEn?'Click here or Ctrl+P / Cmd+P to save as PDF':'点击此处或 Ctrl+P / Cmd+P 保存为 PDF'}</div>
+<div class="card">
+<div class="title"><div style="font-size:8px;color:#3a3832;letter-spacing:4px;margin-bottom:4px">ANATOMYSELF</div>
+<h2>${isEn?'Weekly Energy Guide':'一周能量防御指南'}</h2>
+<div class="sub">${d1} — ${d7}</div></div>
+<div class="dm">${isEn?'Day Master':'日主'} <span>${bazi.dm}(${bazi.dme})</span> · ${dy.lbl} · ${targetLN.lbl}</div>
+${energySVG}
+${days.map(d=>`<div class="day">
+<div class="day-d"><div class="d">${d.date}</div><div class="w">${d.wd}</div></div>
+<div class="day-el" style="background:${EC[d.el]}22;color:${EC[d.el]}">${d.elLabel}</div>
+<div class="day-info"><div class="gz">${d.gan}${d.zhi} <span style="font-size:9px;color:${EC[d.el]}">${d.organ}</span></div><div class="rel">${d.rel}</div></div>
+<div class="day-e" style="color:${d.energy>=80?'#52b09a':d.energy>=60?'#d4a840':'#c44040'}">${d.energy}% ${d.advice}</div>
 </div>`).join('')}
-<div class="disclaimer">☯ 基于传统八字命理推演，属文化参考，不构成医疗建议</div>
-<div class="footer">ANATOMYSELF · 个人生命实验室</div>
+<div class="disc">${isEn?'Based on traditional BaZi analysis. Cultural reference only.':'基于传统八字命理推演，属文化参考。'}</div>
+<div class="ftr">ANATOMYSELF · ${isEn?'Decode Your Biological Blueprint':'解码你的生命蓝图'}</div>
 </div></body></html>`;
-    const blob = new Blob([html], {type:'text/html'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `AnatomySelf_能量防御指南_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.html`; a.click();
-    URL.revokeObjectURL(url);
-  }, [bazi, dy, targetLN]);
+    openReport('Energy Guide', html);
+  }, [bazi, dy, targetLN, locale, metrics]);
 
   // Analysis ceremony phases
   const analysisPhases = useMemo(() => {
@@ -1711,25 +1743,15 @@ ${days.map(d => `<div class="day">
                 <div style={{ gridColumn:"1 / -1", display:"flex", flexDirection:"column", gap:10 }}>
                   <div style={{ display:"flex", gap:10 }}>
                     {sci && (
-                      <button onClick={() => {
-                        const now = new Date();
-                        const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
-                        generateLifeBlueprintPDF({
-                          user: user.username, age, sex, bazi, dy, ln: targetLN,
-                          sci, dst, metrics, colls,
-                          reportId: 'AS-' + Date.now().toString(36).toUpperCase(),
-                          date: dateStr,
-                          RR_EN_SHORT, gR,
-                        }, locale);
-                      }} style={{
+                      <button onClick={generateScienceReport} style={{
                         ...S.btn, flex:1, fontSize:".85rem", padding:"10px 16px",
                         background:"linear-gradient(135deg, #2a4a3a, #52b09a)",
                       }}>
-                        📋 {t('reports.scienceReport')} (PDF)
+                        📋 {t('reports.scienceReport')}
                       </button>
                     )}
                     {dst && (
-                      <button onClick={() => generateDestinyGuide()} style={{
+                      <button onClick={generateDestinyGuide} style={{
                         ...S.btn, flex:1, fontSize:".85rem", padding:"10px 16px",
                         background:"linear-gradient(135deg, #3a2a1a, #c4a265)",
                       }}>
