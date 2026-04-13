@@ -1671,17 +1671,21 @@ ${days.map(d=>`<div class="day">
                   <div style={S.label}>{t('radar.dimOverview')}</div>
                   {colls.map(c => {
                     const isActive = selectedDim === c.el;
+                    // Elemental totem SVG paths
+                    const totemPath = {"木":"M10,2 L10,18 M10,8 L5,12 M10,8 L15,12","火":"M10,2 L18,18 L2,18Z","土":"M3,3 H17 V17 H3Z","金":"M10,10 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0","水":"M10,18 L18,2 L2,2Z"}[c.el];
                     return (
                       <div key={c.el} onClick={() => setSelectedDim(isActive ? null : c.el)} style={{
                         display:"flex", justifyContent:"space-between", alignItems:"center",
-                        padding:"8px 12px", marginTop:4, cursor:"pointer",
+                        padding:"10px 12px", marginTop:4, cursor:"pointer",
                         borderLeft:`3px solid ${isActive ? EC[c.el] : sC[c.lv]}`,
                         background: isActive ? "rgba(196,162,101,0.06)" : "#16161c",
                         transition:"all .25s"
                       }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                          <span style={{ fontSize:"1rem", color:EC[c.el] }}>{c.el}</span>
-                          <span style={{ fontSize:".85rem", color: isActive ? "#e0dcd4" : "#9a9488" }}>{sysOrgan(c.el)}</span>
+                        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                          <svg viewBox="0 0 20 20" width="18" height="18" style={{flexShrink:0}}>
+                            <path d={totemPath} fill="none" stroke={EC[c.el]} strokeWidth="1.2" opacity=".7"/>
+                          </svg>
+                          <span style={{ fontSize:".88rem", color: isActive ? "#e0dcd4" : "#9a9488" }}>{sysOrgan(c.el)}</span>
                         </div>
                         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                           <div style={{ width:40, height:4, background:"#08080a", borderRadius:1 }}>
