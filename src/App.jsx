@@ -1587,7 +1587,14 @@ ${days.map(d=>`<div class="day">
             <div style={{ display:"grid", gridTemplateColumns:"360px 1fr", gap:20 }}>
               {/* LEFT: Radar + dimension list */}
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                <div style={S.card}>
+                <div style={{ ...S.card, position:"relative", overflow:"hidden" }}>
+                  {/* Compass watermark */}
+                  <svg viewBox="0 0 200 200" style={{ position:"absolute", right:-20, bottom:-20, width:160, height:160, opacity:.03, pointerEvents:"none" }}>
+                    <circle cx="100" cy="100" r="90" fill="none" stroke="#c4a265" strokeWidth="1"/>
+                    <circle cx="100" cy="100" r="70" fill="none" stroke="#c4a265" strokeWidth=".5"/>
+                    {[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>{const a=i*Math.PI/6;return <line key={i} x1={100+72*Math.cos(a)} y1={100+72*Math.sin(a)} x2={100+90*Math.cos(a)} y2={100+90*Math.sin(a)} stroke="#c4a265" strokeWidth={i%3===0?".8":".3"}/>;
+                    })}
+                  </svg>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                     <div style={S.label}>{t('radar.title')}</div>
                     <div style={{ ...S.mono, fontSize:".72rem", color: timeOffset===0 ? "#5e5a52" : "#c4a265" }}>
@@ -1773,7 +1780,7 @@ ${days.map(d=>`<div class="day">
                                   <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:6, fontWeight: isCritical ? 600 : 400 }}>
                                     {sciItem.clinical_fact || sciItem.physiological_analysis || '—'}
                                   </div>
-                                  <div style={{ fontSize:".78rem", color:"#52b09a" }}>→ {sciItem.recommendation}</div>
+                                  <div style={{ fontSize:".88rem", color:"#52b09a", fontWeight:500, marginTop:6 }}>→ {sciItem.recommendation}</div>
                                 </>
                               ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
                             </div>
@@ -1792,7 +1799,7 @@ ${days.map(d=>`<div class="day">
                                   {dstItem.risk_window && (
                                     <div style={{ fontSize:".75rem", color:"#d4a840", marginBottom:4 }}>⏱ {dstItem.risk_window}</div>
                                   )}
-                                  <div style={{ fontSize:".78rem", color:"#c4a265" }}>→ {dstItem.prevention}</div>
+                                  <div style={{ fontSize:".88rem", color:"#c4a265", fontWeight:500, marginTop:6 }}>→ {dstItem.prevention}</div>
                                 </>
                               ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
                             </div>
@@ -1937,7 +1944,12 @@ ${days.map(d=>`<div class="day">
                   </div>
 
                   {/* Destiny advice — right brain */}
-                  <div style={{ ...S.card, borderLeft:"3px solid #c4a265" }}>
+                  <div style={{ ...S.card, borderLeft:"3px solid #c4a265", position:"relative", overflow:"hidden" }}>
+                    {/* Ink landscape watermark */}
+                    <svg viewBox="0 0 300 120" style={{ position:"absolute", right:0, bottom:0, width:280, height:100, opacity:.02, pointerEvents:"none" }}>
+                      <path d="M0 120 Q30 60 60 80 Q90 40 120 70 Q150 20 180 50 Q210 10 240 40 Q270 30 300 60 L300 120Z" fill="#c4a265"/>
+                      <path d="M0 120 Q40 80 80 95 Q120 60 160 85 Q200 50 240 75 Q280 60 300 80 L300 120Z" fill="#c4a265" opacity=".5"/>
+                    </svg>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
                       <div style={{ width:10, height:10, borderRadius:"50%", background:"#c4a265" }}/>
                       <div>
@@ -2108,8 +2120,8 @@ ${days.map(d=>`<div class="day">
                               placeholder={t('metrics.pending')}
                               onChange={e => updateMetric(k, e.target.value === "" ? null : e.target.value)}
                               style={{
-                                width:68, background:"#0c0c0f", padding:"5px 4px", outline:"none", textAlign:"center",
-                                ...S.mono, fontSize:".9rem", borderRadius:2,
+                                width:74, background:"#0c0c0f", padding:"6px 4px", outline:"none", textAlign:"center",
+                                ...S.mono, fontSize:"1.1rem", borderRadius:2,
                                 color: !hasVal ? "#6a6560" : inR ? "#f0ece4" : "#c44040",
                                 border: isAnom ? "1px solid rgba(196,64,64,0.5)" : "1px solid rgba(196,162,101,.12)",
                                 animation: isAnom ? "breathe 2s ease-in-out infinite" : "none",
@@ -2117,9 +2129,9 @@ ${days.map(d=>`<div class="day">
                             />
                             {/* Unit + status */}
                             <div style={{ width:48, textAlign:"right" }}>
-                              <div style={{ ...S.mono, fontSize:".68rem", color:"#5e5a52" }}>{ref.u}</div>
+                              <div style={{ ...S.mono, fontSize:".62rem", color:"#4a4a44" }}>{ref.u}</div>
                               {hasVal && (
-                                <div style={{ ...S.mono, fontSize:".65rem", color: inR ? "#52b09a" : "#c44040" }}>
+                                <div style={{ ...S.mono, fontSize:".6rem", color: inR ? "#52b09a" : "#c44040" }}>
                                   {inR ? t("metrics.normal") : m.value > ref.h ? t("metrics.high") : t("metrics.low")}
                                 </div>
                               )}

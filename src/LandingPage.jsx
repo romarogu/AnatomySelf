@@ -60,47 +60,73 @@ const L = {
   },
 };
 
-// Animated radar SVG for hero
-function HeroRadar() {
+// Animated radar SVG for hero — with decorative compass rings
+function HeroRadar({ locale }) {
+  const isEn = locale === 'en';
+  const labels = isEn
+    ? [["Cardio","心",0],["Metabolic","脾",1],["Respiratory","肺",2],["Renal","肾",3],["Hepatic","肝",4]]
+    : [["心血管","火",0],["代谢","土",1],["呼吸","金",2],["肾脏","水",3],["肝胆","木",4]];
+  const colors = ["#c45a30","#a08a50","#9898a8","#3a6a9a","#4a8a4a"];
   return (
-    <svg viewBox="0 0 400 400" style={{ width:"100%", maxWidth:360, height:"auto", margin:"0 auto", display:"block" }}>
+    <svg viewBox="0 0 440 440" style={{ width:"100%", maxWidth:400, height:"auto", margin:"0 auto", display:"block" }}>
       <defs>
-        <radialGradient id="rg1" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#c4a265" stopOpacity=".06"/><stop offset="100%" stopColor="#c4a265" stopOpacity="0"/></radialGradient>
+        <radialGradient id="rg1" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#c4a265" stopOpacity=".08"/><stop offset="100%" stopColor="#c4a265" stopOpacity="0"/></radialGradient>
       </defs>
-      <circle cx="200" cy="200" r="180" fill="url(#rg1)"/>
-      {/* Grid rings */}
+      {/* Outer decorative compass circle */}
+      <circle cx="220" cy="220" r="210" fill="none" stroke="#c4a265" strokeWidth=".3" opacity=".12"/>
+      <circle cx="220" cy="220" r="205" fill="none" stroke="#c4a265" strokeWidth=".15" opacity=".08" strokeDasharray="2 8"/>
+      {/* Tick marks around compass */}
+      {Array.from({length:60},(_,i)=>{
+        const a = i*Math.PI*2/60;
+        const r1 = i%5===0?200:205, r2=210;
+        return <line key={i} x1={220+r1*Math.cos(a)} y1={220+r1*Math.sin(a)} x2={220+r2*Math.cos(a)} y2={220+r2*Math.sin(a)} stroke="#c4a265" strokeWidth={i%5===0?".5":".2"} opacity={i%5===0?".2":".08"}/>;
+      })}
+      {/* Ambient glow */}
+      <circle cx="220" cy="220" r="180" fill="url(#rg1)"/>
+      {/* Grid pentagons */}
       {[1,.75,.5,.25].map(s => {
-        const r = 140*s;
+        const r = 150*s;
         const pts = [0,1,2,3,4].map(i => {
           const a = (i*2*Math.PI/5)-Math.PI/2;
-          return `${200+r*Math.cos(a)},${200+r*Math.sin(a)}`;
+          return `${220+r*Math.cos(a)},${220+r*Math.sin(a)}`;
         }).join(" ");
-        return <polygon key={s} points={pts} fill="none" stroke="#c4a265" strokeWidth=".4" opacity={s*.3}/>;
+        return <polygon key={s} points={pts} fill="none" stroke="#c4a265" strokeWidth=".4" opacity={s*.25}/>;
       })}
       {/* Axes */}
       {[0,1,2,3,4].map(i => {
         const a = (i*2*Math.PI/5)-Math.PI/2;
-        return <line key={i} x1="200" y1="200" x2={200+140*Math.cos(a)} y2={200+140*Math.sin(a)} stroke="#c4a265" strokeWidth=".3" opacity=".15"/>;
+        return <line key={i} x1="220" y1="220" x2={220+150*Math.cos(a)} y2={220+150*Math.sin(a)} stroke="#c4a265" strokeWidth=".3" opacity=".12"/>;
       })}
-      {/* Destiny polygon — animated */}
-      <polygon points={[85,60,45,70,90].map((v,i)=>{const a=(i*2*Math.PI/5)-Math.PI/2;return `${200+140*(v/100)*Math.cos(a)},${200+140*(v/100)*Math.sin(a)}`;}).join(" ")}
-        fill="rgba(196,162,101,.06)" stroke="#c4a265" strokeWidth="1.2" opacity=".6">
-        <animate attributeName="opacity" values=".4;.7;.4" dur="6s" repeatCount="indefinite"/>
+      {/* Destiny polygon — animated, more visible */}
+      <polygon points={[88,62,42,72,92].map((v,i)=>{const a=(i*2*Math.PI/5)-Math.PI/2;return `${220+150*(v/100)*Math.cos(a)},${220+150*(v/100)*Math.sin(a)}`;}).join(" ")}
+        fill="rgba(196,162,101,.08)" stroke="#c4a265" strokeWidth="1.5" opacity=".7">
+        <animate attributeName="opacity" values=".5;.8;.5" dur="6s" repeatCount="indefinite"/>
       </polygon>
       {/* Medical polygon — dashed */}
-      <polygon points={[70,50,80,55,65].map((v,i)=>{const a=(i*2*Math.PI/5)-Math.PI/2;return `${200+140*(v/100)*Math.cos(a)},${200+140*(v/100)*Math.sin(a)}`;}).join(" ")}
-        fill="rgba(224,220,212,.03)" stroke="#e0dcd4" strokeWidth=".8" strokeDasharray="5 4" opacity=".4">
-        <animate attributeName="opacity" values=".25;.5;.25" dur="8s" repeatCount="indefinite"/>
+      <polygon points={[72,48,78,58,68].map((v,i)=>{const a=(i*2*Math.PI/5)-Math.PI/2;return `${220+150*(v/100)*Math.cos(a)},${220+150*(v/100)*Math.sin(a)}`;}).join(" ")}
+        fill="rgba(224,220,212,.04)" stroke="#e0dcd4" strokeWidth=".8" strokeDasharray="5 4" opacity=".35">
+        <animate attributeName="opacity" values=".2;.45;.2" dur="8s" repeatCount="indefinite"/>
       </polygon>
-      {/* Labels */}
-      {[["Cardio","#c45a30",0],["Metabolic","#a08a50",1],["Respiratory","#9898a8",2],["Renal","#3a6a9a",3],["Hepatic","#4a8a4a",4]].map(([lb,c,i])=>{
-        const a=(i*2*Math.PI/5)-Math.PI/2;
-        return <text key={lb} x={200+165*Math.cos(a)} y={200+165*Math.sin(a)+4} textAnchor="middle" fill={c} fontSize="11" fontFamily="'JetBrains Mono',monospace" opacity=".6">{lb}</text>;
+      {/* Vertex dots + bilingual labels */}
+      {labels.map(([main, sub, i]) => {
+        const a = (i*2*Math.PI/5)-Math.PI/2;
+        const lx = 220+178*Math.cos(a), ly = 220+178*Math.sin(a);
+        const dx = 220+150*(([88,62,42,72,92])[i]/100)*Math.cos(a);
+        const dy = 220+150*(([88,62,42,72,92])[i]/100)*Math.sin(a);
+        return <g key={i}>
+          <circle cx={dx} cy={dy} r="4" fill={colors[i]} opacity=".7"/>
+          <text x={lx} y={ly} textAnchor="middle" fill={colors[i]} fontSize="13" fontFamily="'JetBrains Mono',monospace" opacity=".8" dominantBaseline="middle">{main}</text>
+          <text x={lx} y={ly+15} textAnchor="middle" fill={colors[i]} fontSize="10" fontFamily="'Noto Serif SC',serif" opacity=".45">{sub}</text>
+        </g>;
       })}
-      {/* Center glow */}
-      <circle cx="200" cy="200" r="4" fill="#c4a265" opacity=".3">
-        <animate attributeName="r" values="3;6;3" dur="4s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".2;.5;.2" dur="4s" repeatCount="indefinite"/>
+      {/* Center: orbiting dot */}
+      <circle cx="220" cy="220" r="3" fill="#c4a265" opacity=".4">
+        <animate attributeName="r" values="2;5;2" dur="4s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values=".2;.6;.2" dur="4s" repeatCount="indefinite"/>
+      </circle>
+      {/* Slow rotating outer marker */}
+      <circle cx="220" cy="10" r="3" fill="#c4a265" opacity=".2">
+        <animateTransform attributeName="transform" type="rotate" from="0 220 220" to="360 220 220" dur="30s" repeatCount="indefinite"/>
       </circle>
     </svg>
   );
@@ -143,7 +169,7 @@ export default function LandingPage({ onEnter }) {
         <div className="lp-hero-grid" style={{ display:"flex", alignItems:"center", gap:60, maxWidth:1100, width:"100%" }}>
           {/* Left: text */}
           <div style={{ flex:1, minWidth:0 }}>
-            <div className="lp-fade" style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:"#6a5a35", letterSpacing:5, marginBottom:28 }}>{t.eyebrow}</div>
+            <div className="lp-fade" style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:13, color:"#9a9488", letterSpacing:6, marginBottom:28 }}>{t.eyebrow}</div>
             <h1 className="lp-fade" style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"clamp(40px,5.5vw,64px)", fontWeight:300, letterSpacing:".06em", lineHeight:1.15, color:"#e0dcd4", marginBottom:24 }}>
               {t.h1a}<br/><em style={{ fontStyle:"italic", color:"#c4a265", fontWeight:400 }}>{t.h1b}</em>
             </h1>
@@ -154,8 +180,8 @@ export default function LandingPage({ onEnter }) {
             </button>
           </div>
           {/* Right: animated radar */}
-          <div className="lp-fade" style={{ flex:1, maxWidth:380, minWidth:280 }}>
-            <HeroRadar />
+          <div className="lp-fade" style={{ flex:1, maxWidth:400, minWidth:280 }}>
+            <HeroRadar locale={locale} />
           </div>
         </div>
       </section>
