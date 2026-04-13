@@ -404,7 +404,7 @@ function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, ti
       .attr("text-anchor", "middle").attr("font-size", 8)
       .attr("fill", "#c4a265").attr("opacity", 0.5)
       .attr("font-family", "'Noto Serif SC',serif")
-      .text("撞");
+      .text("⟡");
 
   }, [med, dest, colls, selectedDim, timeOffset]);
 
@@ -891,7 +891,7 @@ function Dashboard({ user, setUser, onLogout }) {
     setChatLoading(true);
     try {
       // Build context for the AI
-      let ctx = `用户: ${age}岁${sex === "M" ? "男" : "女"}性, 日主${bazi.dm}(${bazi.dme}), 大运${dy.lbl}, 流年${ln.lbl}\n`;
+      let ctx = `User: ${age}y/o ${sex === "M" ? "male" : "female"}, Day Master ${bazi.dm}(${bazi.dme}), Major Cycle ${dy.lbl}, Annual Cycle ${ln.lbl}\n`;
       if (sci?.summary) ctx += `科学大脑总结: ${sci.summary}\n`;
       if (dst?.temporal_outlook) ctx += `命理大脑总结: ${dst.temporal_outlook}\n`;
       if (sci?.items?.length) ctx += `异常指标: ${sci.items.map(i => i.metric_cn).join("、")}\n`;
@@ -944,7 +944,7 @@ body{background:#08080a;color:#e0dcd4;font-family:'Noto Serif SC',serif;padding:
 <div class="header">
 <div style="font-size:.75rem;color:#3a3832;letter-spacing:.3em">ANATOMYSELF</div>
 <h1>生 命 说 明 书</h1>
-<div class="sub">${user.username} · ${age}岁${sex==="M"?"男":"女"}性 · 日主${bazi.dm}(${bazi.dme})</div>
+<div class="sub">${user.username} · ${age}y/o ${sex==="M"?"Male":"Female"} · Day Master ${bazi.dm}(${bazi.dme})</div>
 <div class="date">${dateStr} · 大运${dy.lbl} · 流年${targetLN.lbl}</div>
 </div>
 
@@ -1096,11 +1096,11 @@ ${days.map(d => `<div class="day">
             </div>)}
           </div>
           <span style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}{t('sidebar.age')}</span>
-          <div onClick={toggleLang} style={{ cursor:"pointer", display:"flex", alignItems:"center", gap:3, padding:"3px 8px", borderRadius:10, background:"rgba(196,162,101,.04)", border:"1px solid rgba(196,162,101,.08)", transition:"all .2s" }}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.2)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.08)";}}>
-            <span style={{ fontSize:".65rem", color:locale==='en'?"#c4a265":"#5e5a52", fontFamily:"'JetBrains Mono',monospace" }}>EN</span>
-            <span style={{ fontSize:".55rem", color:"#3a3832" }}>|</span>
-            <span style={{ fontSize:".65rem", color:locale==='zh'?"#c4a265":"#5e5a52" }}>中</span>
+          <div onClick={toggleLang} style={{ cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", width:28, height:28, borderRadius:"50%", background:"rgba(196,162,101,.04)", border:"1px solid rgba(196,162,101,.06)", transition:"all .25s", position:"relative" }}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.25)";e.currentTarget.style.background="rgba(196,162,101,.08)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.06)";e.currentTarget.style.background="rgba(196,162,101,.04)";}}>
+            <span style={{ fontSize:".62rem", color:"#c4a265", fontFamily:"'JetBrains Mono',monospace", fontWeight:600, letterSpacing:"-0.5px" }}>
+              {locale === 'en' ? '文' : 'En'}
+            </span>
           </div>
           <button onClick={onLogout} style={{ background:"rgba(196,64,64,.06)", border:"1px solid rgba(196,64,64,.2)", color:"#c44040", padding:"4px 14px", fontSize:".8rem", cursor:"pointer", fontFamily:"'Noto Serif SC',serif", borderRadius:2, transition:"all .2s" }}
             onMouseEnter={e=>{e.target.style.background="rgba(196,64,64,.15)";}} onMouseLeave={e=>{e.target.style.background="rgba(196,64,64,.06)";}}>
@@ -1210,8 +1210,8 @@ ${days.map(d => `<div class="day">
                     <div style={{ marginTop:10 }}>
                       {ocr.ocr_unavailable && (
                         <div style={{ padding:"14px 16px", background:"rgba(196,162,101,0.06)", border:"1px solid rgba(196,162,101,0.15)", marginBottom:10 }}>
-                          <div style={{ fontSize:".9rem", color:"#c4a265", marginBottom:6 }}>📝 请手动输入体检数据</div>
-                          <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.7 }}>{ocr.message || "图片OCR自动识别暂未开启。请在下方「当前指标」区域直接修改您的体检数值，然后点击「启动双脑对撞分析」。"}</div>
+                          <div style={{ fontSize:".9rem", color:"#c4a265", marginBottom:6 }}>📝 {t("upload.ocrManual")}</div>
+                          <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.7 }}>{ocr.message || t("upload.ocrEmpty")}</div>
                         </div>
                       )}
                       {ocr.error && <div style={{ fontSize:".85rem", color:"#d4a840", marginBottom:8 }}>⚠ {ocr.error}</div>}
@@ -1223,7 +1223,7 @@ ${days.map(d => `<div class="day">
                         </div>
                       ))}
                     </div>
-                  ) : <div style={{ fontSize:".85rem", color:"#3a3832", textAlign:"center", padding:20, marginTop:10 }}>上传报告或直接在下方手动输入指标</div>}
+                  ) : <div style={{ fontSize:".85rem", color:"#3a3832", textAlign:"center", padding:20, marginTop:10 }}>{t("upload.ocrEmpty")}</div>}
                 </div>
               </div>
 
@@ -1453,8 +1453,8 @@ ${days.map(d => `<div class="day">
                             fontSize:".85rem", color: coll.hasRealAnomaly ? "#c44040" : "#c4a265"
                           }}>
                             {coll.hasRealAnomaly
-                              ? `⚠ 体检异常 + 命理偏弱 — 偏离度 ${coll.dv}%，此维度需要重点关注`
-                              : `☯ 先天短板提示 — 偏离度 ${coll.dv}%，体检虽正常但命理五行偏弱，建议长期留意`
+                              ? `⚠ ${t("analysis.realAnomaly", {dv: coll.dv})}`
+                              : `☯ ${t("analysis.constitutionNote", {dv: coll.dv})}`
                             }
                           </div>
                         )}
@@ -1481,7 +1481,7 @@ ${days.map(d => `<div class="day">
                                     </div>
                                     {it.anatomical_context && <div style={{ fontSize:".85rem", color:"#c4a265", marginBottom:4 }}>🔬 {it.anatomical_context}</div>}
                                     <div style={{ fontSize:".88rem", color:"#d0ccc4", lineHeight:1.8 }}>{it.physiological_analysis}</div>
-                                    {it.demographic_specific && <div style={{ fontSize:".82rem", color:"#5a9ad4", background:"rgba(58,106,154,.06)", padding:"5px 10px", marginTop:4 }}>👤 {age}岁{sex==="M"?"男":"女"}性：{it.demographic_specific}</div>}
+                                    {it.demographic_specific && <div style={{ fontSize:".82rem", color:"#5a9ad4", background:"rgba(58,106,154,.06)", padding:"5px 10px", marginTop:4 }}>👤 {age}{t("sidebar.age")} {sex==="M"?t("sidebar.male"):t("sidebar.female")}: {it.demographic_specific}</div>}
                                     <div style={{ fontSize:".82rem", color:"#52b09a", marginTop:4 }}>💡 {it.recommendation}</div>
                                   </div>
                                 </div>
@@ -1524,7 +1524,7 @@ ${days.map(d => `<div class="day">
 
                             {!hasData && (
                               <div style={{ padding:20, textAlign:"center", color:"#3a3832", fontSize:".88rem" }}>
-                                此维度暂无异常数据，双脑未生成分析
+                                {t("analysis.noData")}
                               </div>
                             )}
                           </div>
@@ -1533,10 +1533,10 @@ ${days.map(d => `<div class="day">
                         <div style={{ ...S.card, padding:24 }}>
                           <div style={{ fontSize:"1rem", color:"#c4a265", marginBottom:8 }}>{selectedDim} {sysOrgan(selectedDim)}</div>
                           <div style={{ fontSize:".88rem", color:"#9a9488", lineHeight:1.8 }}>
-                            此维度体检指标均在正常范围内。
+                            {t("analysis.dimNormal")}
                             {coll?.dest < 40
-                              ? `但命理五行中「${selectedDim}」仅占 ${coll.dest}%，属先天偏弱环节。建议启动双脑分析，获取命理脑的养生方向建议。`
-                              : "医学与命理在此维度较为和谐，可通过启动双脑分析获取更深入的格局解读。"
+                              ? t("analysis.dimWeakConst", {pct: coll.dest})
+                              : t("analysis.dimHarmony")
                             }
                           </div>
                         </div>
@@ -1863,7 +1863,7 @@ ${days.map(d => `<div class="day">
                               <div style={{ ...S.mono, fontSize:".68rem", color:"#5e5a52" }}>{ref.u}</div>
                               {hasVal && (
                                 <div style={{ ...S.mono, fontSize:".65rem", color: inR ? "#52b09a" : "#c44040" }}>
-                                  {inR ? "正常" : m.value > ref.h ? "偏高↑" : "偏低↓"}
+                                  {inR ? t("metrics.normal") : m.value > ref.h ? t("metrics.high") : t("metrics.low")}
                                 </div>
                               )}
                             </div>
