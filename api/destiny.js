@@ -162,14 +162,14 @@ ${findings || '无明显异常'}
         temperature: 0.3,
         messages: [
           { role: 'system', content: SYSTEM + langInstruction },
-          { role: 'user', content: prompt + langInstruction }
+          { role: 'user', content: prompt }
         ],
       }),
     });
 
     if (!resp.ok) {
       const err = await resp.text();
-      return res.status(500).json({ error: 'DeepSeek 失败(' + resp.status + '): ' + err.substring(0, 300) });
+      return res.status(500).json({ error: 'DeepSeek error(' + resp.status + '): ' + err.substring(0, 300) });
     }
 
     const data = await resp.json();
@@ -177,6 +177,6 @@ ${findings || '无明显异常'}
     const parsed = parseJson(txt);
     res.json(parsed || { collision_items: [], temporal_outlook: txt.substring(0, 800) });
   } catch (e) {
-    res.status(500).json({ error: '命理分析失败: ' + e.message });
+    res.status(500).json({ error: 'Destiny analysis error: ' + e.message });
   }
 }
