@@ -39,12 +39,17 @@ export default async function handler(req, res) {
     const Y = new Date().getFullYear();
     const M = new Date().getMonth() + 1;
 
-    const prompt = `${baziStr} | ${dayMaster}(${dayMasterElement}) | 大运${dayun.lbl}(${dayun.el}) 流年${liunian.lbl}(${liunian.el})
-木${wuxing['木']}% 火${wuxing['火']}% 土${wuxing['土']}% 金${wuxing['金']}% 水${wuxing['水']}%
+    const prompt = isEn
+      ? `${baziStr} | Day Master:${dayMaster}(${dayMasterElement}) | Major Cycle:${dayun.lbl}(${dayun.el}) Annual:${liunian.lbl}(${liunian.el})
+Wood${wuxing['木']}% Fire${wuxing['火']}% Earth${wuxing['土']}% Metal${wuxing['金']}% Water${wuxing['水']}%
 ${findings || 'All biomarkers normal'}
-Predict from ${Y}/${M} to ${Y+1}. Return JSON:
+Predict ${Y}/${M} to ${Y+1}. Return JSON. ALL text fields MUST be in English:
+{"bazi_analysis":{"pillars_detail":"","tiangang_relations":"","dizhi_relations":"","pattern":"","tiaohou":"","tongguan":"","twelve_stages":"","wangxiang":"","shenshas":""},"collision_items":[{"organ_wuxing":"木or火or土or金or水","current_forces":"","evolution_path":"","risk_window":"","prevention":""}],"life_tuning":{"medical_advice":["","",""],"destiny_advice":["","",""]},"temporal_outlook":"","key_dates":[""]}`
+      : `${baziStr} | 日主:${dayMaster}(${dayMasterElement}) | 大运${dayun.lbl}(${dayun.el}) 流年${liunian.lbl}(${liunian.el})
+木${wuxing['木']}% 火${wuxing['火']}% 土${wuxing['土']}% 金${wuxing['金']}% 水${wuxing['水']}%
+${findings || '无明显异常'}
+预测${Y}年${M}月至${Y+1}年。返回JSON:
 {"bazi_analysis":{"pillars_detail":"","tiangang_relations":"","dizhi_relations":"","pattern":"","tiaohou":"","tongguan":"","twelve_stages":"","wangxiang":"","shenshas":""},"collision_items":[{"organ_wuxing":"木or火or土or金or水","current_forces":"","evolution_path":"","risk_window":"","prevention":""}],"life_tuning":{"medical_advice":["","",""],"destiny_advice":["","",""]},"temporal_outlook":"","key_dates":[""]}`;
-
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
