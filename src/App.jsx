@@ -223,7 +223,7 @@ function calcColls(med,dest) {
 // ════════════════════════════════════════
 // D3 INTERACTIVE RADAR COMPONENT
 // ════════════════════════════════════════
-function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, timeOffset = 0, radarLabels, tooltipLabels }) {
+function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, timeOffset = 0, radarLabels, tooltipLabels, discoveryMode }) {
   const svgRef = useRef(null);
   const tooltipRef = useRef(null);
   const [hoveredDim, setHoveredDim] = useState(null);
@@ -278,19 +278,37 @@ function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, ti
       .attr("opacity", 0)
       .transition().duration(800).attr("opacity", 0.75);
 
-    // Medical polygon (dashed)
-    const medPts = order.map((e, i) => [
-      cx + r * (med[e] || 50) / 100 * Math.cos(angles[i]),
-      cy + r * (med[e] || 50) / 100 * Math.sin(angles[i])
-    ]);
-    g.append("polygon")
-      .attr("points", medPts.map(p => p.join(",")).join(" "))
-      .attr("fill", "rgba(224,220,212,0.04)")
-      .attr("stroke", "#e0dcd4")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "5 3")
-      .attr("opacity", 0)
-      .transition().duration(800).delay(200).attr("opacity", 0.55);
+    // Medical polygon (dashed) — in discovery mode, show as faint placeholder circle
+    if (discoveryMode) {
+      // Draw faint dashed circle as placeholder
+      g.append("circle")
+        .attr("cx", cx).attr("cy", cy).attr("r", r * 0.5)
+        .attr("fill", "none")
+        .attr("stroke", "#e0dcd4")
+        .attr("stroke-width", 0.5)
+        .attr("stroke-dasharray", "4 6")
+        .attr("opacity", 0.15);
+      g.append("text")
+        .attr("x", cx).attr("y", cy + r * 0.5 + 16)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#3a3832")
+        .attr("font-size", "8px")
+        .attr("font-family", "'JetBrains Mono',monospace")
+        .text("Upload data to reveal");
+    } else {
+      const medPts = order.map((e, i) => [
+        cx + r * (med[e] || 50) / 100 * Math.cos(angles[i]),
+        cy + r * (med[e] || 50) / 100 * Math.sin(angles[i])
+      ]);
+      g.append("polygon")
+        .attr("points", medPts.map(p => p.join(",")).join(" "))
+        .attr("fill", "rgba(224,220,212,0.04)")
+        .attr("stroke", "#e0dcd4")
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "5 3")
+        .attr("opacity", 0)
+        .transition().duration(800).delay(200).attr("opacity", 0.55);
+    }
 
     // Pulse warning for deviations > 30%
     colls.filter(c => c.lv === "alert").forEach(c => {
@@ -569,26 +587,46 @@ function AuthScreen({ onLogin }) {
 // BIRTH SETUP SCREEN
 // ════════════════════════════════════════
 function BirthSetup({ user, onSave }) {
+  const { t, locale, toggleLang } = useI18n();
   const [by, setBY] = useState(user.birthYear || 1990);
   const [bm, setBM] = useState(user.birthMonth || 6);
   const [bd, setBD] = useState(user.birthDay || 15);
   const [bh, setBH] = useState(user.birthHour || 12);
   const [sex, setSex] = useState(user.sex || "M");
+  const [rhr, setRhr] = useState(72);
+  const [hasLabData, setHasLabData] = useState(null); // null=not chosen, true/false
 
+  const isEn = locale === 'en';
   const bazi = useMemo(() => calcBazi(by, bm, bd, bh), [by, bm, bd, bh]);
-  const pls = [{lb:"年柱",s:bazi.year[0],b:bazi.year[1]},{lb:"月柱",s:bazi.month[0],b:bazi.month[1]},{lb:"日柱",s:bazi.day[0],b:bazi.day[1]},{lb:"时柱",s:bazi.hour[0],b:bazi.hour[1]}];
+  const _pl = isEn ? ["Year","Month","Day","Hour"] : ["年柱","月柱","日柱","时柱"];
+  const pls = [{lb:_pl[0],s:bazi.year[0],b:bazi.year[1]},{lb:_pl[1],s:bazi.month[0],b:bazi.month[1]},{lb:_pl[2],s:bazi.day[0],b:bazi.day[1]},{lb:_pl[3],s:bazi.hour[0],b:bazi.hour[1]}];
+
+  const handleSave = () => {
+    const initMetrics = INIT_M.map(m => m.key === 'RHR' ? {...m, value: rhr} : m);
+    onSave({ birthYear:by, birthMonth:bm, birthDay:bd, birthHour:bh, sex, metrics: initMetrics, discoveryMode: hasLabData === false });
+  };
 
   return (
     <div style={{ minHeight:"100vh", background:"#08080a", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Noto Serif SC',serif",
       backgroundImage:"linear-gradient(rgba(196,162,101,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(196,162,101,.015) 1px,transparent 1px)", backgroundSize:"60px 60px" }}>
-      <div style={{ width:480, padding:48, background:"#0f1014", border:"1px solid rgba(196,162,101,0.1)" }}>
-        <div style={{ textAlign:"center", marginBottom:32 }}>
-          <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.3rem", fontWeight:300, letterSpacing:".12em", color:"#e0dcd4" }}>设置您的生辰信息</div>
-          <div style={{ fontSize:"0.85rem", color:"#5e5a52", marginTop:4 }}>欢迎, {user.username}</div>
+      <div style={{ width:520, padding:48, background:"#0f1014", border:"1px solid rgba(196,162,101,0.1)" }}>
+        {/* Language toggle */}
+        <div style={{ textAlign:"right", marginBottom:8 }}>
+          <span onClick={toggleLang} style={{ cursor:"pointer", fontSize:".72rem", color:"#5e5a52", fontFamily:"'JetBrains Mono',monospace" }}>
+            {isEn ? '中文' : 'EN'}
+          </span>
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:20 }}>
-          {[["出生年",by,setBY,1940,2025],["月",bm,setBM,1,12],["日",bd,setBD,1,31]].map(([l,v,fn,min,max]) => (
+        <div style={{ textAlign:"center", marginBottom:28 }}>
+          <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.3rem", fontWeight:300, letterSpacing:".12em", color:"#e0dcd4" }}>
+            {isEn ? 'Set Up Your Birth Profile' : '设置您的生辰信息'}
+          </div>
+          <div style={{ fontSize:"0.85rem", color:"#5e5a52", marginTop:4 }}>{isEn ? 'Welcome' : '欢迎'}, {user.username}</div>
+        </div>
+
+        {/* Birth date inputs */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:16 }}>
+          {[[isEn?"Birth Year":"出生年",by,setBY,1940,2025],[isEn?"Month":"月",bm,setBM,1,12],[isEn?"Day":"日",bd,setBD,1,31]].map(([l,v,fn,min,max]) => (
             <div key={l}>
               <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{l}</div>
               <input type="number" value={v} min={min} max={max} onChange={e=>fn(parseInt(e.target.value)||min)} style={S.input} />
@@ -596,16 +634,18 @@ function BirthSetup({ user, onSave }) {
           ))}
         </div>
 
-        <div style={{ marginBottom:20 }}>
-          <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>出生时辰（24小时制）</div>
+        {/* Birth hour slider */}
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{isEn ? 'Birth Hour (24h)' : '出生时辰（24小时制）'}</div>
           <input type="range" min="0" max="23" value={bh} onChange={e=>setBH(parseInt(e.target.value))} style={{ width:"100%", accentColor:"#c4a265" }} />
           <div style={{ textAlign:"center", ...S.mono, fontSize:"1.1rem", color:"#c4a265", marginTop:4 }}>{bh}:00</div>
         </div>
 
-        <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>生理性别</div>
+        {/* Sex */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{isEn ? 'Biological Sex' : '生理性别'}</div>
           <div style={{ display:"flex", gap:8 }}>
-            {[["M","男"],["F","女"]].map(([v,l]) => (
+            {[["M",isEn?"Male":"男"],["F",isEn?"Female":"女"]].map(([v,l]) => (
               <button key={v} onClick={()=>setSex(v)} style={{
                 flex:1, padding:"10px", fontSize:"1rem",
                 background:sex===v?"rgba(196,162,101,0.1)":"#16161c",
@@ -617,24 +657,78 @@ function BirthSetup({ user, onSave }) {
         </div>
 
         {/* Live BaZi preview */}
-        <div style={{ marginBottom:24 }}>
-          <div style={S.label}>实时八字预览</div>
+        <div style={{ marginBottom:20 }}>
+          <div style={S.label}>{isEn ? 'LIVE BIRTH CHART' : '实时八字预览'}</div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
             {pls.map(p => (
-              <div key={p.lb} style={{ textAlign:"center", padding:"12px 6px", background:"#16161c", border:p.lb==="日柱"?`2px solid ${EC[bazi.dme]}`:"1px solid rgba(196,162,101,0.06)" }}>
-                <div style={{ fontSize:"0.72rem", color:"#5e5a52", marginBottom:6 }}>{p.lb}</div>
-                <div style={{ fontSize:"1.5rem", color:"#e0dcd4", fontWeight:300, lineHeight:1.2 }}>{p.s}</div>
-                <div style={{ fontSize:"1.5rem", color:"#c4a265", fontWeight:400, lineHeight:1.2 }}>{p.b}</div>
+              <div key={p.lb} style={{ textAlign:"center", padding:"10px 6px", background:"#16161c", border:p.lb===_pl[2]?`2px solid ${EC[bazi.dme]}`:"1px solid rgba(196,162,101,0.06)" }}>
+                <div style={{ fontSize:"0.68rem", color:"#5e5a52", marginBottom:4 }}>{p.lb}</div>
+                <div style={{ fontSize:"1.3rem", color:"#e0dcd4", fontWeight:300, lineHeight:1.2 }}>{p.s}</div>
+                <div style={{ fontSize:"1.3rem", color:"#c4a265", fontWeight:400, lineHeight:1.2 }}>{p.b}</div>
               </div>
             ))}
           </div>
-          <div style={{ textAlign:"center", marginTop:10, fontSize:"0.9rem", color:EC[bazi.dme] }}>
-            日主：{bazi.dm} ({bazi.dme})
+          <div style={{ textAlign:"center", marginTop:8, fontSize:"0.88rem", color:EC[bazi.dme] }}>
+            {isEn ? 'Day Master' : '日主'}：{bazi.dm} ({bazi.dme})
           </div>
         </div>
 
-        <button onClick={()=>onSave({birthYear:by,birthMonth:bm,birthDay:bd,birthHour:bh,sex})} style={{...S.btn, width:"100%"}}>
-          保存并进入系统 →
+        {/* Resting Heart Rate — the ONE biomarker */}
+        <div style={{ marginBottom:20, padding:"16px 20px", background:"#16161c", border:"1px solid rgba(82,176,154,0.12)" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+            <div style={{ width:6, height:6, borderRadius:"50%", background:"#52b09a" }}/>
+            <span style={{ ...S.mono, fontSize:".72rem", color:"#52b09a", letterSpacing:".1em" }}>
+              {isEn ? 'YOUR RESTING HEART RATE' : '您的静息心率'}
+            </span>
+          </div>
+          <div style={{ fontSize:".82rem", color:"#9a9488", marginBottom:10, lineHeight:1.6 }}>
+            {isEn
+              ? 'Place two fingers on your wrist. Count beats for 15 seconds, multiply by 4. This single biomarker anchors your analysis in clinical reality.'
+              : '将两根手指放在手腕上，数15秒内的心跳次数，乘以4。这一个生物标记将你的分析锚定在临床现实中。'}
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <input type="number" value={rhr} min={40} max={180} onChange={e=>setRhr(parseInt(e.target.value)||72)}
+              style={{ ...S.input, width:80, textAlign:"center", fontSize:"1.3rem", color:"#52b09a" }} />
+            <span style={{ ...S.mono, fontSize:".85rem", color:"#5e5a52" }}>BPM</span>
+            <div style={{ flex:1, height:4, background:"#08080a", borderRadius:2 }}>
+              <div style={{ height:"100%", width:Math.min(100,Math.max(0,(rhr-40)/140*100))+"%", background:rhr>=60&&rhr<=100?"#52b09a":"#c44040", borderRadius:2, transition:"width .3s" }}/>
+            </div>
+          </div>
+        </div>
+
+        {/* Lab data choice */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:".85rem", color:"#9a9488", marginBottom:10 }}>
+            {isEn ? 'Do you have lab results to upload?' : '您有体检报告可以上传吗？'}
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={()=>setHasLabData(true)} style={{
+              flex:1, padding:"10px", fontSize:".9rem",
+              background:hasLabData===true?"rgba(82,176,154,0.1)":"#16161c",
+              border:`1px solid ${hasLabData===true?"rgba(82,176,154,0.3)":"rgba(196,162,101,0.08)"}`,
+              color:hasLabData===true?"#52b09a":"#5e5a52", cursor:"pointer", fontFamily:"'Noto Serif SC',serif"
+            }}>{isEn ? '✓ Yes, I have lab data' : '✓ 有，我有体检数据'}</button>
+            <button onClick={()=>setHasLabData(false)} style={{
+              flex:1, padding:"10px", fontSize:".9rem",
+              background:hasLabData===false?"rgba(196,162,101,0.1)":"#16161c",
+              border:`1px solid ${hasLabData===false?"rgba(196,162,101,0.3)":"rgba(196,162,101,0.08)"}`,
+              color:hasLabData===false?"#c4a265":"#5e5a52", cursor:"pointer", fontFamily:"'Noto Serif SC',serif"
+            }}>{isEn ? '☯ Discovery Mode' : '☯ 探索模式'}</button>
+          </div>
+          {hasLabData === false && (
+            <div style={{ marginTop:10, padding:"10px 14px", background:"rgba(196,162,101,0.04)", border:"1px solid rgba(196,162,101,0.08)", fontSize:".82rem", color:"#c4a265", lineHeight:1.6 }}>
+              {isEn
+                ? '→ You\'ll receive a Theoretical Vulnerability Analysis based on your birth chart, plus Top 3 Recommended Biomarkers to monitor. Upload lab data anytime to unlock full clinical collision analysis.'
+                : '→ 您将获得基于命理的理论脆弱性分析，以及推荐监测的三项关键指标。随时上传体检数据可解锁完整的临床对撞分析。'}
+            </div>
+          )}
+        </div>
+
+        <button onClick={handleSave} disabled={hasLabData===null} style={{...S.btn, width:"100%", opacity:hasLabData===null?.5:1, cursor:hasLabData===null?"not-allowed":"pointer"}}>
+          {hasLabData === false
+            ? (isEn ? 'Enter Discovery Mode →' : '进入探索模式 →')
+            : (isEn ? 'Save & Enter System →' : '保存并进入系统 →')
+          }
         </button>
       </div>
     </div>
@@ -659,6 +753,10 @@ export default function App() {
     setUser(updated);
     setSetupDone(true);
     try { if (updated.userId) await apiSaveUser(updated.userId, updated); } catch {}
+    // If metrics were passed (with RHR pre-filled), store them
+    if (birthData.metrics) {
+      try { localStorage.setItem('as_metrics_' + (updated.userId || 'anon'), JSON.stringify(birthData.metrics)); } catch {}
+    }
   }, [user]);
 
   const handleLogout = useCallback(() => { apiLogout(); setUser(null); setSetupDone(false); }, []);
@@ -683,13 +781,17 @@ function Dashboard({ user, setUser, onLogout }) {
   const mName = (key) => locale === 'en' ? (RR_EN_SHORT[key] || key) : (RR[key]?.cn || key);
   const mNameFull = (key) => locale === 'en' ? (RR_EN[key] || key) : (RR[key]?.cn || key);
   const statusText = (st) => locale === 'en' ? (st === '偏高' ? 'High' : st === '偏低' ? 'Low' : st) : st;
+  const isDiscovery = !!user.discoveryMode;
   // Ensure all 15 standard slots exist, merging any saved data
   const initMetrics = useMemo(() => {
-    const saved = user.metrics || [];
-    // Start from 15 standard slots
+    // Try localStorage first (has RHR from BirthSetup)
+    let saved = user.metrics || [];
+    try {
+      const stored = localStorage.getItem('as_metrics_' + (user.userId || 'anon'));
+      if (stored) { const parsed = JSON.parse(stored); if (Array.isArray(parsed) && parsed.length) saved = parsed; }
+    } catch {}
     return INIT_M.map(slot => {
       const existing = saved.find(m => m.key === slot.key);
-      // Also check old key aliases (BP→SBP, TC→TG)
       const aliased = !existing && slot.key === "SBP" ? saved.find(m => m.key === "BP") :
                       !existing && slot.key === "TG" ? saved.find(m => m.key === "TC") : null;
       return existing ? { ...slot, value: existing.value } :
@@ -704,7 +806,7 @@ function Dashboard({ user, setUser, onLogout }) {
   const [sciL, setSciL] = useState(false);
   const [dst, setDst] = useState(null);
   const [dstL, setDstL] = useState(false);
-  const [tab, setTab] = useState("upload");
+  const [tab, setTab] = useState(isDiscovery ? "radar" : "upload");
   const [pipe, setPipe] = useState([{lb:"Upload",st:"idle"},{lb:"OCR",st:"idle"},{lb:"Science",st:"idle"},{lb:"Meta",st:"idle"}]);
   const fileRef = useRef(null);
   // Analysis ceremony state
@@ -886,6 +988,13 @@ function Dashboard({ user, setUser, onLogout }) {
       }
     }
   }, [sci, dst, dstL, doDst]);
+
+  // Discovery mode: auto-trigger destiny brain on mount (no science brain needed)
+  useEffect(() => {
+    if (isDiscovery && !dst && !dstL && !sci) {
+      doDst();
+    }
+  }, [isDiscovery]); // eslint-disable-line -- only on mount
 
   // ── CHAT FUNCTION ──
   const sendChat = useCallback(async () => {
@@ -1492,6 +1601,7 @@ ${days.map(d=>`<div class="day">
                       : [["火·心","#c45a30"],["土·脾","#a08a50"],["金·肺","#9898a8"],["水·肾","#3a6a9a"],["木·肝","#4a8a4a"]]
                     }
                     tooltipLabels={{ clinical:t('radar.clinicalScore'), energetic:t('radar.energeticScore'), divergence:t('radar.divergence'), resonance:t('radar.resonance') }}
+                    discoveryMode={isDiscovery}
                   />
                   <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:10, fontSize:".78rem" }}>
                     <span style={{ color:"#c4a265" }}>{t('radar.destinyLayer')}</span>
