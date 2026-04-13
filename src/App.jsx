@@ -1743,19 +1743,48 @@ ${days.map(d=>`<div class="day">
                 <div style={{ gridColumn:"1 / -1", display:"flex", flexDirection:"column", gap:10 }}>
                   <div style={{ display:"flex", gap:10 }}>
                     {sci && (
-                      <button onClick={generateScienceReport} style={{
+                      <button onClick={() => {
+                        const now = new Date();
+                        const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+                        generateLifeBlueprintPDF({
+                          user: user.username, age, sex, bazi, dy, ln: targetLN,
+                          sci, dst, metrics, med: medWX, dest: destWX, colls,
+                          reportId: 'AS-' + Date.now().toString(36).toUpperCase(),
+                          date: dateStr, RR_EN_SHORT, RR, gR,
+                        }, locale);
+                      }} style={{
                         ...S.btn, flex:1, fontSize:".85rem", padding:"10px 16px",
                         background:"linear-gradient(135deg, #2a4a3a, #52b09a)",
                       }}>
-                        📋 {t('reports.scienceReport')}
+                        📋 {t('reports.scienceReport')} (PDF)
                       </button>
                     )}
                     {dst && (
-                      <button onClick={generateDestinyGuide} style={{
+                      <button onClick={() => {
+                        const now = new Date();
+                        const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+                        const weekDayNames = ["日","一","二","三","四","五","六"];
+                        const weekDayNamesEn = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+                        const days = Array.from({length:7}, (_, i) => {
+                          const d = new Date(now.getTime() + i * 864e5);
+                          const delta = Math.round((d - new Date(2000,0,7))/864e5);
+                          const ds = SC[md(delta,10)], db = BC[md(delta,12)];
+                          const dayEl = TG[ds][0];
+                          const rel = dayEl===bazi.dme?"Companion":GEN[bazi.dme]===dayEl?"Output":CTL[bazi.dme]===dayEl?"Wealth":GEN[dayEl]===bazi.dme?"Resource":"Power";
+                          const energy = dayEl===bazi.dme?90:GEN[dayEl]===bazi.dme?80:GEN[bazi.dme]===dayEl?60:CTL[dayEl]===bazi.dme?30:45;
+                          return {
+                            date:`${d.getMonth()+1}/${d.getDate()}`, weekday:weekDayNames[d.getDay()], weekdayEn:weekDayNamesEn[d.getDay()],
+                            gan:ds, zhi:db, el:dayEl, rel, energy,
+                            advice: energy>=80?"Advance":energy>=60?"Steady":"Guard",
+                            organ: EO[dayEl],
+                          };
+                        });
+                        generateWeeklyGuidePDF({ bazi, dy, ln: targetLN, date: dateStr, weekDays: days }, locale);
+                      }} style={{
                         ...S.btn, flex:1, fontSize:".85rem", padding:"10px 16px",
                         background:"linear-gradient(135deg, #3a2a1a, #c4a265)",
                       }}>
-                        ☯ {t('reports.destinyGuide')}
+                        ☯ {t('reports.destinyGuide')} (PDF)
                       </button>
                     )}
                   </div>
