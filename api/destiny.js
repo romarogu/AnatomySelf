@@ -79,10 +79,11 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
   try {
     const body = await readBody(req);
-    const { baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings } = body;
+    const { baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang } = body;
+    const isEn = lang === 'en';
 
     const KEY = process.env.DEEPSEEK_API_KEY;
-    if (!KEY) return res.status(500).json({ error: '未配置 DEEPSEEK_API_KEY' });
+    if (!KEY) return res.status(500).json({ error: isEn ? 'DEEPSEEK_API_KEY not configured' : '未配置 DEEPSEEK_API_KEY' });
 
     // Build detailed pillar description
     let pillarDesc = '';
@@ -144,6 +145,11 @@ ${findings || '无明显异常'}
   "key_dates": ["${currentYear}年X月：原因", "${currentYear + 1}年X月：原因"]
 }`;
 
+    // Add language instruction
+    const langInstruction = isEn
+      ? '\n\nIMPORTANT: Respond entirely in English. Translate all Chinese metaphysical terms with original Chinese in parentheses, e.g. "Wood Element (木)", "Day Master (日主)". All analysis text, advice, and temporal outlook must be in English.'
+      : '';
+
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -155,8 +161,8 @@ ${findings || '无明显异常'}
         max_tokens: 6000,
         temperature: 0.3,
         messages: [
-          { role: 'system', content: SYSTEM },
-          { role: 'user', content: prompt }
+          { role: 'system', content: SYSTEM + langInstruction },
+          { role: 'user', content: prompt + langInstruction }
         ],
       }),
     });

@@ -794,20 +794,20 @@ function Dashboard({ user, setUser, onLogout }) {
       if (anoms.length > 0) {
         // 有异常 → 重点分析异常项
         const anomalyData = anoms.map(a => ({ key: a.key, cn: a.ref.cn, value: a.value, unit: a.ref.u, low: a.ref.l, high: a.ref.h, status: a.st }));
-        const res = await apiScience({ age, sex, anomalies: anomalyData });
+        const res = await apiScience({ age, sex, anomalies: anomalyData, lang: locale });
         setSci(res);
       } else {
         // 全部正常 → 发送全部数据做健康确认
-        const res = await apiScience({ age, sex, anomalies: [], allMetrics: allData });
+        const res = await apiScience({ age, sex, anomalies: [], allMetrics: allData, lang: locale });
         setSci(res);
       }
       setPipe(p=>p.map((s,i)=>i===2?{...s,st:"done"}:s));
     } catch (err) {
-      setSci({ items: [], summary: "科学大脑分析失败: " + err.message });
+      setSci({ items: [], summary: (locale==='en'?"Science Brain error: ":"科学大脑分析失败: ") + err.message });
       setPipe(p=>p.map((s,i)=>i===2?{...s,st:"idle"}:s));
     }
     setSciL(false);
-  }, [anoms, metrics, age, sex]);
+  }, [anoms, metrics, age, sex, locale]);
 
   // ── DESTINY BRAIN — 始终独立工作 ──
   const doDst = useCallback(async () => {
@@ -839,16 +839,16 @@ function Dashboard({ user, setUser, onLogout }) {
           hour: bazi.hour[0] + bazi.hour[1],
         },
         baziStr, dayMaster: bazi.dm, dayMasterElement: bazi.dme,
-        dayun: dy, liunian: ln, wuxing: destWX, findings
+        dayun: dy, liunian: ln, wuxing: destWX, findings, lang: locale
       });
       setDst(res);
       setPipe(p=>p.map((s,i)=>i===3?{...s,st:"done"}:s));
     } catch (err) {
-      setDst({ collision_items: [], temporal_outlook: "命理大脑分析失败: " + err.message, bazi_analysis: null });
+      setDst({ collision_items: [], temporal_outlook: (locale==='en'?"Meta Brain error: ":"命理大脑分析失败: ") + err.message, bazi_analysis: null });
       setPipe(p=>p.map((s,i)=>i===3?{...s,st:"idle"}:s));
     }
     setDstL(false);
-  }, [sci, anoms, metrics, age, sex, baziStr, bazi, dy, ln, destWX]);
+  }, [sci, anoms, metrics, age, sex, baziStr, bazi, dy, ln, destWX, locale]);
 
   useEffect(() => {
     // Auto-trigger destiny brain when science completes
@@ -877,13 +877,13 @@ function Dashboard({ user, setUser, onLogout }) {
       const recent = chatHistory.slice(-4).map(m => `${m.role === "user" ? "用户" : (m.brain === "science" ? "科学脑" : "命理脑")}: ${m.text}`).join("\n");
       if (recent) ctx += `\n对话历史:\n${recent}`;
 
-      const res = await apiChat({ brain: chatBrain, question: q, context: ctx });
-      setChatHistory(prev => [...prev, { role: "assistant", text: res.answer || "无回答", brain: chatBrain }]);
+      const res = await apiChat({ brain: chatBrain, question: q, context: ctx, lang: locale });
+      setChatHistory(prev => [...prev, { role: "assistant", text: res.answer || (locale==='en'?"No response":"无回答"), brain: chatBrain }]);
     } catch (err) {
-      setChatHistory(prev => [...prev, { role: "assistant", text: "对话失败: " + err.message, brain: chatBrain }]);
+      setChatHistory(prev => [...prev, { role: "assistant", text: (locale==='en'?"Chat error: ":"对话失败: ") + err.message, brain: chatBrain }]);
     }
     setChatLoading(false);
-  }, [chatInput, chatBrain, chatLoading, chatHistory, age, sex, bazi, dy, ln, sci, dst]);
+  }, [chatInput, chatBrain, chatLoading, chatHistory, age, sex, bazi, dy, ln, sci, dst, locale]);
 
   // ── 科学脑报告：生命说明书 ──
   const generateScienceReport = useCallback(() => {

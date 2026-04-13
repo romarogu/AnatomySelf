@@ -28,11 +28,11 @@ export async function apiOCR(file) {
   return resp.json();
 }
 
-export async function apiScience({ age, sex, anomalies }) {
+export async function apiScience({ age, sex, anomalies, allMetrics, lang }) {
   const resp = await fetch('/api/science', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ age, sex, anomalies }),
+    body: JSON.stringify({ age, sex, anomalies, allMetrics, lang }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
@@ -41,11 +41,11 @@ export async function apiScience({ age, sex, anomalies }) {
   return resp.json();
 }
 
-export async function apiDestiny({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings }) {
+export async function apiDestiny({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang }) {
   const resp = await fetch('/api/destiny', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings }),
+    body: JSON.stringify({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
@@ -54,11 +54,11 @@ export async function apiDestiny({ baziPillars, baziStr, dayMaster, dayMasterEle
   return resp.json();
 }
 
-export async function apiChat({ brain, question, context }) {
+export async function apiChat({ brain, question, context, lang }) {
   const resp = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ brain, question, context }),
+    body: JSON.stringify({ brain, question, context, lang }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
