@@ -222,14 +222,15 @@ function calcColls(med,dest) {
 // ════════════════════════════════════════
 // D3 INTERACTIVE RADAR COMPONENT
 // ════════════════════════════════════════
-function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, timeOffset = 0 }) {
+function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, timeOffset = 0, radarLabels, tooltipLabels }) {
   const svgRef = useRef(null);
   const tooltipRef = useRef(null);
   const [hoveredDim, setHoveredDim] = useState(null);
 
   const order = ["火","土","金","水","木"];
-  const labels = [["火·心","#c45a30"],["土·脾","#a08a50"],["金·肺","#9898a8"],["水·肾","#3a6a9a"],["木·肝","#4a8a4a"]];
-  const organs = {"火":"心·小肠","土":"脾·胃","金":"肺·大肠","水":"肾·膀胱","木":"肝·胆"};
+  const labels = radarLabels || [["Fire","#c45a30"],["Earth","#a08a50"],["Metal","#9898a8"],["Water","#3a6a9a"],["Wood","#4a8a4a"]];
+  const tl = tooltipLabels || { clinical:"Clinical", energetic:"Energetic", divergence:"Divergence", resonance:"Resonance" };
+  const organMap = {"火":labels[0][0],"土":labels[1][0],"金":labels[2][0],"水":labels[3][0],"木":labels[4][0]};
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -421,23 +422,23 @@ function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, ti
         {hoveredColl && (
           <>
             <div style={{ fontSize: ".8rem", color: EC[hoveredColl.el], fontWeight: 600, marginBottom: 4 }}>
-              {hoveredColl.el} · {organs[hoveredColl.el]}
+              {organMap[hoveredColl.el]}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".75rem", marginBottom: 2 }}>
-              <span style={{ color: "#e0dcd4" }}>医学层</span>
+              <span style={{ color: "#e0dcd4" }}>{tl.clinical}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#e0dcd4" }}>{hoveredColl.med}%</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".75rem", marginBottom: 2 }}>
-              <span style={{ color: "#c4a265" }}>命理层</span>
+              <span style={{ color: "#c4a265" }}>{tl.energetic}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#c4a265" }}>{hoveredColl.dest}%</span>
             </div>
             <div style={{ height: 1, background: "rgba(196,162,101,0.1)", margin: "4px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".75rem" }}>
-              <span style={{ color: "#9a9488" }}>偏离度</span>
+              <span style={{ color: "#9a9488" }}>{tl.divergence}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", color: sC[hoveredColl.lv] }}>{hoveredColl.dv}%</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".75rem" }}>
-              <span style={{ color: "#9a9488" }}>共振度</span>
+              <span style={{ color: "#9a9488" }}>{tl.resonance}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", color: sC[hoveredColl.lv] }}>{hoveredColl.corr}%</span>
             </div>
             <div style={{ textAlign: "center", marginTop: 4, fontSize: ".7rem", color: sC[hoveredColl.lv], fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".1em" }}>
@@ -744,7 +745,8 @@ function Dashboard({ user, setUser, onLogout }) {
   const colls = useMemo(()=>calcColls(medWX,destWX), [medWX,destWX]);
   const anoms = useMemo(()=>metrics.filter(m=>{if(m.value==null)return false;const r=gR(m.key,age,sex);return r&&(m.value<r.l||m.value>r.h);}).map(m=>({...m,ref:gR(m.key,age,sex),st:m.value>(gR(m.key,age,sex)?.h||999)?"偏高":"偏低"})), [metrics,age,sex]);
 
-  const pls = [{lb:"年柱",s:bazi.year[0],b:bazi.year[1]},{lb:"月柱",s:bazi.month[0],b:bazi.month[1]},{lb:"日柱",s:bazi.day[0],b:bazi.day[1]},{lb:"时柱",s:bazi.hour[0],b:bazi.hour[1]}];
+  const _pl = locale==="en" ? ["Year","Month","Day","Hour"] : ["年柱","月柱","日柱","时柱"];
+  const pls = [{lb:_pl[0],s:bazi.year[0],b:bazi.year[1]},{lb:_pl[1],s:bazi.month[0],b:bazi.month[1]},{lb:_pl[2],s:bazi.day[0],b:bazi.day[1]},{lb:_pl[3],s:bazi.hour[0],b:bazi.hour[1]}];
   const baziStr = pls.map(p=>p.s+p.b).join(" ");
 
   // Save metrics to storage
@@ -1304,6 +1306,11 @@ ${days.map(d => `<div class="day">
                     onSelectDimension={setSelectedDim}
                     selectedDim={selectedDim}
                     timeOffset={timeOffset}
+                    radarLabels={locale === 'en'
+                      ? [["Cardio","#c45a30"],["Metabolic","#a08a50"],["Respiratory","#9898a8"],["Renal","#3a6a9a"],["Hepatic","#4a8a4a"]]
+                      : [["火·心","#c45a30"],["土·脾","#a08a50"],["金·肺","#9898a8"],["水·肾","#3a6a9a"],["木·肝","#4a8a4a"]]
+                    }
+                    tooltipLabels={{ clinical:t('radar.clinicalScore'), energetic:t('radar.energeticScore'), divergence:t('radar.divergence'), resonance:t('radar.resonance') }}
                   />
                   <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:10, fontSize:".78rem" }}>
                     <span style={{ color:"#c4a265" }}>{t('radar.destinyLayer')}</span>
@@ -1388,7 +1395,7 @@ ${days.map(d => `<div class="day">
                 {/* BaZi deep analysis (collapsible) */}
                 {dst?.bazi_analysis && (
                   <div style={{ ...S.card, borderColor:"rgba(196,162,101,.08)" }}>
-                    <div style={{ ...S.mono, fontSize:".72rem", color:"#c4a265", marginBottom:8, letterSpacing:".15em" }}>八字命理详析</div>
+                    <div style={{ ...S.mono, fontSize:".72rem", color:"#c4a265", marginBottom:8, letterSpacing:".15em" }}>{t('analysis.dualBrainTitle')}</div>
                     {[
                       ["📋", "pillars_detail", "四柱"],
                       ["📐", "pattern", "格局"],
@@ -1457,7 +1464,7 @@ ${days.map(d => `<div class="day">
                         /* Dialogue-style cross analysis */
                         <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
                           <div style={{ padding:"12px 16px", background:"rgba(196,162,101,0.03)", borderBottom:"1px solid rgba(196,162,101,0.06)" }}>
-                            <div style={{ ...S.mono, fontSize:".75rem", color:"#6a5a35", letterSpacing:".15em" }}>双脑对话式关联分析 · {selectedDim} {sysOrgan(selectedDim)}</div>
+                            <div style={{ ...S.mono, fontSize:".75rem", color:"#6a5a35", letterSpacing:".15em" }}>{t('analysis.dualBrainTitle')} · {selectedDim} {sysOrgan(selectedDim)}</div>
                           </div>
                           <div style={{ padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
                             {/* Interleave science and destiny items as a dialogue */}
@@ -1469,7 +1476,7 @@ ${days.map(d => `<div class="day">
                                   <div style={{ flex:1 }}>
                                     <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
                                       <div style={{ width:6, height:6, borderRadius:"50%", background:"#52b09a" }}/>
-                                      <span style={{ ...S.mono, fontSize:".72rem", color:"#52b09a" }}>科学脑 · {it.metric_cn}</span>
+                                      <span style={{ ...S.mono, fontSize:".72rem", color:"#52b09a" }}>{t('analysis.scienceBrain')} · {it.metric_cn}</span>
                                       {it.severity && <span style={{ ...S.mono, fontSize:".65rem", padding:"1px 6px", background:it.severity==="severe"?"rgba(196,64,64,.1)":"rgba(212,168,64,.1)", color:it.severity==="severe"?"#c44040":"#d4a840" }}>{it.severity.toUpperCase()}</span>}
                                     </div>
                                     {it.anatomical_context && <div style={{ fontSize:".85rem", color:"#c4a265", marginBottom:4 }}>🔬 {it.anatomical_context}</div>}
@@ -1486,7 +1493,7 @@ ${days.map(d => `<div class="day">
                                     <div style={{ flex:1 }}>
                                       <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
                                         <div style={{ width:6, height:6, borderRadius:"50%", background:"#c4a265" }}/>
-                                        <span style={{ ...S.mono, fontSize:".72rem", color:"#c4a265" }}>命理脑 · 对撞回应</span>
+                                        <span style={{ ...S.mono, fontSize:".72rem", color:"#c4a265" }}>{t('analysis.metaResponse')}</span>
                                         {dstItems[i].risk_window && <span style={{ ...S.mono, fontSize:".65rem", color:"#d4a840" }}>🕐 {dstItems[i].risk_window}</span>}
                                       </div>
                                       <div style={{ fontSize:".88rem", color:"#d0ccc4", lineHeight:1.8 }}>⚡ {dstItems[i].current_forces}</div>
@@ -1505,7 +1512,7 @@ ${days.map(d => `<div class="day">
                                 <div style={{ flex:1 }}>
                                   <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
                                     <div style={{ width:6, height:6, borderRadius:"50%", background:"#c4a265" }}/>
-                                    <span style={{ ...S.mono, fontSize:".72rem", color:"#c4a265" }}>命理脑 · 独立洞察</span>
+                                    <span style={{ ...S.mono, fontSize:".72rem", color:"#c4a265" }}>{t('analysis.metaInsight')}</span>
                                     {it.risk_window && <span style={{ ...S.mono, fontSize:".65rem", color:"#d4a840" }}>🕐 {it.risk_window}</span>}
                                   </div>
                                   <div style={{ fontSize:".88rem", color:"#d0ccc4", lineHeight:1.8 }}>⚡ {it.current_forces}</div>
@@ -1549,22 +1556,21 @@ ${days.map(d => `<div class="day">
                   <>
                     {/* Summary cards */}
                     <div style={{ ...S.card, borderColor:"rgba(196,162,101,.06)" }}>
-                      <div style={{ fontSize:"1rem", color:"#e0dcd4", marginBottom:12 }}>点击雷达或左侧维度，查看双脑关联分析</div>
+                      <div style={{ fontSize:"1rem", color:"#e0dcd4", marginBottom:12 }}>{t('analysis.selectDimPrompt')}</div>
                       <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.8 }}>
-                        雷达展示了五行维度上「医学层」与「命理层」的对撞状态。当偏离度超过 30% 时，该维度触发脉冲预警。
-                        点击任意维度可展开科学脑与命理脑的对话式关联分析——两个大脑不再各自罗列，而是围绕同一异常进行交叉对话。
+                        {t('analysis.selectDimDesc')}
                       </div>
                     </div>
 
                     {/* Quick overview of all science + destiny findings */}
                     {(sci?.items?.length > 0 || dst?.collision_items?.length > 0) && (
                       <div style={{ ...S.card }}>
-                        <div style={S.label}>全局异常概览</div>
+                        <div style={S.label}>{t('analysis.globalOverview')}</div>
                         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:8 }}>
                           <div>
                             <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
                               <div style={{ width:6, height:6, borderRadius:"50%", background:"#52b09a" }}/>
-                              <span style={{ ...S.mono, fontSize:".75rem", color:"#52b09a" }}>科学脑发现</span>
+                              <span style={{ ...S.mono, fontSize:".75rem", color:"#52b09a" }}>{t('analysis.sciFindings')}</span>
                             </div>
                             {sci?.items?.length ? sci.items.map((it,i) => (
                               <div key={i} onClick={() => setSelectedDim(it.organ_system)} style={{
@@ -1574,12 +1580,12 @@ ${days.map(d => `<div class="day">
                                 <span style={{ fontSize:".85rem", color:"#e0dcd4" }}>{it.metric_cn}</span>
                                 <span style={{ fontSize:".75rem", color:"#5e5a52", marginLeft:6 }}>{it.organ_system}</span>
                               </div>
-                            )) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>暂无数据</div>}
+                            )) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>{t('analysis.noData')}</div>}
                           </div>
                           <div>
                             <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
                               <div style={{ width:6, height:6, borderRadius:"50%", background:"#c4a265" }}/>
-                              <span style={{ ...S.mono, fontSize:".75rem", color:"#c4a265" }}>命理脑发现</span>
+                              <span style={{ ...S.mono, fontSize:".75rem", color:"#c4a265" }}>{t('analysis.metaFindings')}</span>
                             </div>
                             {dst?.collision_items?.length ? dst.collision_items.map((it,i) => (
                               <div key={i} onClick={() => setSelectedDim(it.organ_wuxing)} style={{
@@ -1589,7 +1595,7 @@ ${days.map(d => `<div class="day">
                                 <span style={{ fontSize:".85rem", color:"#e0dcd4" }}>{it.organ_wuxing} {sysOrgan(it.organ_wuxing)}</span>
                                 {it.risk_window && <span style={{ fontSize:".72rem", color:"#d4a840", marginLeft:6 }}>{it.risk_window}</span>}
                               </div>
-                            )) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>暂无数据</div>}
+                            )) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>{t('analysis.noData')}</div>}
                           </div>
                         </div>
                       </div>
@@ -1597,7 +1603,7 @@ ${days.map(d => `<div class="day">
 
                     {sci?.summary && (
                       <div style={{ ...S.card, borderColor:"rgba(82,176,154,.08)" }}>
-                        <div style={{ ...S.mono, fontSize:".72rem", color:"#52b09a", marginBottom:6 }}>科学脑综合判断</div>
+                        <div style={{ ...S.mono, fontSize:".72rem", color:"#52b09a", marginBottom:6 }}>{t('analysis.sciSummary')}</div>
                         <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.7 }}>{sci.summary}</div>
                       </div>
                     )}
@@ -1609,7 +1615,7 @@ ${days.map(d => `<div class="day">
                     )}
                     {dst?.key_dates?.length > 0 && (
                       <div style={{ ...S.card }}>
-                        <div style={S.label}>关键时间节点</div>
+                        <div style={S.label}>{t('analysis.keyDates')}</div>
                         {dst.key_dates.map((d,i) => <div key={i} style={{ fontSize:".85rem", color:"#d4a840", marginBottom:4 }}>📅 {d}</div>)}
                       </div>
                     )}
