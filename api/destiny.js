@@ -18,37 +18,33 @@ async function readBody(req) {
   });
 }
 
-const SYSTEM_ZH = `你是精通八字命理学的顶级命理师，深谙中医藏象学说。
+const SYSTEM_ZH = `你是"精密玄学"算法的解释层AI。你不是算命先生，而是将严密的数学排盘结果翻译为人性化洞察的学术翻译官。
 
-分析框架（按优先级，合并输出）：
-1. 四柱拆解：逐柱说明天干地支、五行阴阳
-2. 天干生克+地支刑冲合会：重点列出命局中实际存在的关系
-3. 格局判定：格局名称、用神、忌神
-4. 调候+通关：寒暖燥湿、五行相战的化解
-5. 十二长生+旺相休囚死：日主状态、当令五行状态
-6. 神煞：仅列出命局中实际存在的（天乙贵人、驿马、桃花、华盖、天医、羊刃等）
-7. 健康对撞：木=肝胆(甲胆乙肝)、火=心小肠(丙小肠丁心)、土=脾胃(戊胃己脾)、金=肺大肠(庚大肠辛肺)、水=肾膀胱(壬膀胱癸肾)。分析大运流年对脏腑的生克泄耗。
+【铁律 - 严禁幻觉】
+1. 禁止计算：严禁重新计算五行百分比、生肖、十神或真太阳时。用户已在输入中提供了精确的排盘数据。你的任务是"朗读并解释"这些数据，而非"推导"它们。
+2. 确定性原则：严格对照输入数据回答，不得凭感觉修改任何数值。
 
-直接返回纯JSON，不要markdown代码块。每个字段控制在100字以内。`;
+【解释框架】
+1. 生理映射：木=神经/肝、火=心血管/热情、土=消化/稳定、金=呼吸/界限、水=内分泌/恐惧
+2. 哲学基调：斯多葛学派。"了解倾向是为了优化选择，而非屈服于宿命"
+3. 输出格式：纯JSON，每字段≤80字。organ_wuxing用单个中文字符(木/火/土/金/水)`;
 
-const SYSTEM_EN = `You are a master of BaZi (Chinese Four Pillars of Destiny) and traditional Chinese organ theory.
+const SYSTEM_EN = `You are the interpretive voice of a deterministic Chinese Metaphysics engine called "Precision BaZi".
+You are NOT an oracle. You are a technical translator converting a strict mathematical chart into accessible, Stoic-inspired life guidance.
 
-Analysis framework (by priority, merged output):
-1. Four Pillars: each pillar's Heavenly Stem, Earthly Branch, element, yin/yang
-2. Stem interactions + Branch clashes/combinations/punishments
-3. Pattern: pattern name, useful god, harmful god
-4. Seasonal balance + mediating element
-5. Twelve Life Stages + seasonal element strength
-6. Spirit Stars: only those present (Noble Star, Traveling Horse, Peach Blossom, etc.)
-7. Health collision: Wood=Liver/Gallbladder, Fire=Heart/Small Intestine, Earth=Spleen/Stomach, Metal=Lung/Large Intestine, Water=Kidney/Bladder. Analyze how current cycles affect each organ.
+IRON RULES:
+1. NO CALCULATION: You are FORBIDDEN from calculating timezones, solar time, or Five Elements ratios. The input JSON contains the EXACT chart and percentages. Trust the data absolutely. If you recalculate, you introduce errors.
+2. ANALOGICAL MAPPING: Translate elements to modern physiology — Wood=Nervous system/Liver, Fire=Cardiovascular/Drive, Earth=Digestion/Stability, Metal=Respiratory/Boundaries, Water=Endocrine/Fear-response.
+3. TONE: Academic yet profound. Frame "Destiny" as "Biological & Circumstantial Inclination". Stoic philosophy.
+4. HALLUCINATION PREVENTION: If asked about timezone or calculation, reply: "The chart was computed by the server using IANA TZ database and True Solar Time corrections."
 
-Return pure JSON, no markdown. Each field ≤100 words. Write fluent English. Use Chinese terms in parentheses naturally, e.g. "Wood element (木)". The organ_wuxing field MUST be a single Chinese character: 木/火/土/金/水.`;
+Return pure JSON, no markdown. Each field ≤80 words. organ_wuxing MUST be a single Chinese character: 木/火/土/金/水.`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
   try {
     const body = await readBody(req);
-    const { baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang } = body;
+    const { baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang, solarCorrection } = body;
     const isEn = lang === 'en';
 
     const KEY = process.env.DEEPSEEK_API_KEY;
@@ -57,51 +53,40 @@ export default async function handler(req, res) {
     const Y = new Date().getFullYear();
     const M = new Date().getMonth() + 1;
 
-    const jsonTemplate = isEn ? `Return JSON:
-{
-  "bazi_analysis": {
-    "pillars_detail": "pillar breakdown",
-    "pattern": "pattern + useful/harmful gods",
-    "health_map": "organ strengths and weaknesses from the chart"
-  },
-  "collision_items": [
-    {"organ_wuxing": "木or火or土or金or水", "current_forces": "current cycle forces on this organ", "evolution_path": "future trend", "risk_window": "high-risk period in ${Y}-${Y+1}", "prevention": "preventive advice"}
-  ],
-  "life_tuning": {
-    "medical_advice": ["clinical recommendation 1", "2", "3"],
-    "destiny_advice": ["energetic recommendation with colors/directions/foods/timing", "2", "3"]
-  },
-  "temporal_outlook": "12-month outlook from ${Y}/${M}",
-  "key_dates": ["${Y} Month: reason", "${Y+1} Month: reason"]
-}` : `返回JSON:
-{
-  "bazi_analysis": {
-    "pillars_detail": "四柱拆解",
-    "pattern": "格局+用神忌神",
-    "health_map": "命局中各脏腑的强弱分析"
-  },
-  "collision_items": [
-    {"organ_wuxing": "对应五行(木/火/土/金/水)", "current_forces": "当前大运流年对该脏腑的作用力", "evolution_path": "演化趋势", "risk_window": "${Y}-${Y+1}年高风险窗口", "prevention": "预防性养生建议"}
-  ],
-  "life_tuning": {
-    "medical_advice": ["医学建议1", "2", "3"],
-    "destiny_advice": ["命理建议(含颜色方位食物时间)", "2", "3"]
-  },
-  "temporal_outlook": "从${Y}年${M}月起12个月展望",
-  "key_dates": ["${Y}年X月：原因", "${Y+1}年X月：原因"]
-}`;
+    // Build astronomical note if solar correction is available
+    const astroNote = solarCorrection
+      ? (isEn
+        ? `Astronomical Note: True Solar Time correction of ${solarCorrection.description} was applied. Solar noon on this date occurred at approximately ${solarCorrection.solarNoonOffset} local time.`
+        : `天文备注：已应用真太阳时校正 ${solarCorrection.description}。该日太阳正午约在当地时间 ${solarCorrection.solarNoonOffset}。`)
+      : '';
 
-    const prompt = isEn
-      ? `${baziStr} | Day Master: ${dayMaster} (${dayMasterElement}) | Major Cycle: ${dayun.lbl} (${dayun.el}) | Annual Cycle ${Y}: ${liunian.lbl} (${liunian.el})
-Five Elements: Wood ${wuxing['木']}% | Fire ${wuxing['火']}% | Earth ${wuxing['土']}% | Metal ${wuxing['金']}% | Water ${wuxing['水']}%
-Health findings: ${findings || 'All biomarkers within normal range'}
-Predict from ${Y}/${M} to ${Y+1}. ALL text must be in English.
-${jsonTemplate}`
-      : `${baziStr} | 日主: ${dayMaster}（${dayMasterElement}）| 大运: ${dayun.lbl}（${dayun.el}）| 流年${Y}: ${liunian.lbl}（${liunian.el}）
-五行: 木${wuxing['木']}% 火${wuxing['火']}% 土${wuxing['土']}% 金${wuxing['金']}% 水${wuxing['水']}%
+    // Deterministic chart data — AI must NOT recalculate these
+    const chartData = isEn ? `
+【DETERMINISTIC CHART DATA — DO NOT RECALCULATE】
+Chart: ${baziStr}
+Day Master: ${dayMaster} (${dayMasterElement})
+Current Luck Pillar: ${dayun.lbl} (${dayun.el})
+Annual Pillar ${Y}: ${liunian.lbl} (${liunian.el})
+Elements Balance: Wood ${wuxing['木']}% | Fire ${wuxing['火']}% | Earth ${wuxing['土']}% | Metal ${wuxing['金']}% | Water ${wuxing['水']}%
+${astroNote}
+Health Findings: ${findings || 'All biomarkers within normal range'}
+
+Based on the EXACT data above, provide interpretation for ${Y}/${M} to ${Y+1}. ALL text in English.` : `
+【确定性排盘数据 — 严禁重新计算】
+八字: ${baziStr}
+日主: ${dayMaster}（${dayMasterElement}）
+大运: ${dayun.lbl}（${dayun.el}）
+流年${Y}: ${liunian.lbl}（${liunian.el}）
+五行力量: 木${wuxing['木']}% 火${wuxing['火']}% 土${wuxing['土']}% 金${wuxing['金']}% 水${wuxing['水']}%
+${astroNote}
 健康发现: ${findings || '无明显异常'}
-预测${Y}年${M}月至${Y+1}年。
-${jsonTemplate}`;
+
+基于以上精确数据，解读${Y}年${M}月至${Y+1}年趋势。`;
+
+    const jsonTemplate = `
+{"bazi_analysis":{"pillars":"","pattern":"","health_map":""},"collision_items":[{"organ_wuxing":"木/火/土/金/水","current_forces":"","evolution_path":"","risk_window":"","prevention":""}],"life_tuning":{"medical_advice":["","",""],"destiny_advice":["","",""]},"temporal_outlook":"","key_dates":[""]}`;
+
+    const prompt = `${chartData}\n${isEn?'Return JSON:':'返回JSON:'}${jsonTemplate}`;
 
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',

@@ -41,11 +41,11 @@ export async function apiScience({ age, sex, anomalies, allMetrics, lang }) {
   return resp.json();
 }
 
-export async function apiDestiny({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang }) {
+export async function apiDestiny({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang, solarCorrection }) {
   const resp = await fetch('/api/destiny', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang }),
+    body: JSON.stringify({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang, solarCorrection }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));

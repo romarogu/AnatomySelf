@@ -20,12 +20,45 @@ const EO = {"木":"肝·胆","火":"心·小肠","土":"脾·胃","金":"肺·�
 
 function md(n, m) { return ((n % m) + m) % m; }
 
-function calcBazi(y, m, d, h) {
+// True Solar Time calculation
+function calcSolarCorrection(y, m, d, lon) {
+  if (lon == null) return null;
+  // 1. Longitude correction: offset from standard meridian
+  // Standard meridians: every 15° (UTC+8 = 120°E, UTC-5 = -75°, etc)
+  const stdMeridian = Math.round(lon / 15) * 15;
+  const lonCorrection = (lon - stdMeridian) * 4; // minutes
+
+  // 2. Equation of Time (Jean Meeus simplified)
+  const dayOfYear = Math.floor((new Date(y, m-1, d) - new Date(y, 0, 0)) / 864e5);
+  const B = (360 / 365) * (dayOfYear - 81) * Math.PI / 180;
+  const EoT = 9.87 * Math.sin(2*B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B); // minutes
+
+  const totalMinutes = lonCorrection + EoT;
+  const sign = totalMinutes >= 0 ? '+' : '';
+  return {
+    lonCorrection: Math.round(lonCorrection * 10) / 10,
+    eot: Math.round(EoT * 10) / 10,
+    totalMinutes: Math.round(totalMinutes * 10) / 10,
+    description: `${sign}${Math.round(totalMinutes)}min (lon ${sign}${Math.round(lonCorrection)}min, EoT ${EoT>=0?'+':''}${Math.round(EoT)}min)`,
+    solarNoonOffset: `${12}:${String(Math.round(Math.abs(totalMinutes))).padStart(2,'0')} ${totalMinutes>0?'PM (late)':'PM (early)'}`,
+  };
+}
+
+function calcBazi(y, m, d, h, solarCorrMinutes) {
+  // Apply solar time correction to hour if provided
+  let adjH = h;
+  if (solarCorrMinutes != null) {
+    adjH = h + solarCorrMinutes / 60;
+    // Handle day boundary wrap
+    if (adjH >= 24) { adjH -= 24; d += 1; }
+    if (adjH < 0) { adjH += 24; d -= 1; }
+  }
+
   const ys = SC[md(y-4,10)], yb = BC[md(y-4,12)];
   const mb = BC[md(m+1,12)], ms = SC[md(md(SC.indexOf(ys)%5,5)*2+m-1,10)];
   const delta = Math.round((new Date(y,m-1,d)-new Date(2000,0,7))/864e5);
   const ds = SC[md(delta,10)], db = BC[md(delta,12)];
-  const hbi = Math.floor((h+1)/2)%12;
+  const hbi = Math.floor((adjH+1)/2)%12;
   const hs = SC[md(md(SC.indexOf(ds)%5,5)*2+hbi,10)], hb = BC[hbi];
   return { year:[ys,yb], month:[ms,mb], day:[ds,db], hour:[hs,hb], dm:ds, dme:TG[ds][0] };
 }
@@ -597,16 +630,42 @@ function BirthSetup({ user, onSave }) {
   const [bh, setBH] = useState(user.birthHour || 12);
   const [sex, setSex] = useState(user.sex || "M");
   const [rhr, setRhr] = useState(72);
-  const [hasLabData, setHasLabData] = useState(null); // null=not chosen, true/false
+  const [hasLabData, setHasLabData] = useState(null);
+  // Optional: birth location for True Solar Time
+  const [birthCity, setBirthCity] = useState(user.birthCity || "");
+  const [birthLon, setBirthLon] = useState(user.birthLon || null);
+  const [showLocation, setShowLocation] = useState(false);
 
   const isEn = locale === 'en';
-  const bazi = useMemo(() => calcBazi(by, bm, bd, bh), [by, bm, bd, bh]);
+
+  // Common cities for quick selection
+  const CITIES = [
+    {n:"Beijing",cn:"北京",lon:116.4}, {n:"Shanghai",cn:"上海",lon:121.5}, {n:"Hong Kong",cn:"香港",lon:114.2},
+    {n:"Taipei",cn:"台北",lon:121.5}, {n:"Singapore",cn:"新加坡",lon:103.8}, {n:"Tokyo",cn:"东京",lon:139.7},
+    {n:"Seoul",cn:"首尔",lon:127.0}, {n:"New York",cn:"纽约",lon:-74.0}, {n:"Los Angeles",cn:"洛杉矶",lon:-118.2},
+    {n:"London",cn:"伦敦",lon:-0.1}, {n:"Sydney",cn:"悉尼",lon:151.2}, {n:"San Francisco",cn:"旧金山",lon:-122.4},
+  ];
+
+  // Calculate solar correction if longitude is set
+  const solarCorr = useMemo(() => birthLon != null ? calcSolarCorrection(by, bm, bd, birthLon) : null, [by, bm, bd, birthLon]);
+
+  // Calculate BaZi with solar correction
+  const bazi = useMemo(() => calcBazi(by, bm, bd, bh, solarCorr?.totalMinutes), [by, bm, bd, bh, solarCorr]);
+  const baziUncorrected = useMemo(() => solarCorr ? calcBazi(by, bm, bd, bh) : null, [by, bm, bd, bh, solarCorr]);
+
   const _pl = isEn ? ["Year","Month","Day","Hour"] : ["年柱","月柱","日柱","时柱"];
   const pls = [{lb:_pl[0],s:bazi.year[0],b:bazi.year[1]},{lb:_pl[1],s:bazi.month[0],b:bazi.month[1]},{lb:_pl[2],s:bazi.day[0],b:bazi.day[1]},{lb:_pl[3],s:bazi.hour[0],b:bazi.hour[1]}];
 
+  // Check if hour pillar shifted due to solar correction
+  const hourShifted = baziUncorrected && (baziUncorrected.hour[0] !== bazi.hour[0] || baziUncorrected.hour[1] !== bazi.hour[1]);
+
   const handleSave = () => {
     const initMetrics = INIT_M.map(m => m.key === 'RHR' ? {...m, value: rhr} : m);
-    onSave({ birthYear:by, birthMonth:bm, birthDay:bd, birthHour:bh, sex, metrics: initMetrics, discoveryMode: hasLabData === false });
+    onSave({
+      birthYear:by, birthMonth:bm, birthDay:bd, birthHour:bh, sex,
+      birthCity, birthLon, solarCorrection: solarCorr,
+      metrics: initMetrics, discoveryMode: hasLabData === false
+    });
   };
 
   return (
@@ -661,6 +720,51 @@ function BirthSetup({ user, onSave }) {
 
         {/* Live BaZi preview */}
         <div style={{ marginBottom:20 }}>
+          {/* Optional: Birth location for True Solar Time */}
+          <div style={{ marginBottom:16 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ fontSize:".85rem", color:"#9a9488" }}>{isEn ? 'Birth Location (optional)' : '出生地点（可选）'}</span>
+              {!showLocation && (
+                <button onClick={()=>setShowLocation(true)} style={{ background:"none", border:"1px solid rgba(196,162,101,.12)", color:"#6a5a35", fontSize:".72rem", padding:"3px 10px", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace" }}>
+                  {isEn ? '+ Enable True Solar Time' : '+ 启用真太阳时'}
+                </button>
+              )}
+            </div>
+            {showLocation && (
+              <div style={{ padding:"12px 16px", background:"#16161c", border:"1px solid rgba(196,162,101,.06)" }}>
+                <div style={{ fontSize:".78rem", color:"#5e5a52", marginBottom:10, lineHeight:1.5 }}>
+                  {isEn
+                    ? 'Selecting your birth city enables True Solar Time correction — the same astronomical algorithm used by observatories.'
+                    : '选择出生城市可启用真太阳时校正——与天文台使用的相同算法。'}
+                </div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
+                  {CITIES.map(c => (
+                    <button key={c.n} onClick={()=>{setBirthCity(isEn?c.n:c.cn);setBirthLon(c.lon);}}
+                      style={{ padding:"4px 10px", fontSize:".72rem", cursor:"pointer",
+                        background: birthLon===c.lon?"rgba(196,162,101,.1)":"#0c0c0f",
+                        border:`1px solid ${birthLon===c.lon?"rgba(196,162,101,.3)":"rgba(196,162,101,.06)"}`,
+                        color: birthLon===c.lon?"#c4a265":"#5e5a52", fontFamily:"'JetBrains Mono',monospace" }}>
+                      {isEn?c.n:c.cn}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span style={{ fontSize:".72rem", color:"#5e5a52" }}>{isEn?'Or longitude:':'或输入经度:'}</span>
+                  <input type="number" step="0.1" value={birthLon||""} placeholder="e.g. 116.4"
+                    onChange={e=>{const v=parseFloat(e.target.value);setBirthLon(isNaN(v)?null:v);setBirthCity(isEn?'Custom':'自定义');}}
+                    style={{ ...S.input, width:100, fontSize:".85rem" }}/>
+                  <span style={{ fontSize:".68rem", color:"#3a3832" }}>°E/W</span>
+                </div>
+                {solarCorr && (
+                  <div style={{ marginTop:10, padding:"8px 12px", background:"rgba(82,176,154,.04)", border:"1px solid rgba(82,176,154,.08)", fontSize:".75rem", color:"#52b09a", fontFamily:"'JetBrains Mono',monospace", lineHeight:1.6 }}>
+                    <div>☉ {isEn?'Solar correction':'太阳时校正'}: {solarCorr.description}</div>
+                    {hourShifted && <div style={{ color:"#d4a840", marginTop:4 }}>⚡ {isEn?'Hour Pillar shifted due to solar correction!':'时柱因太阳时校正发生变化！'}</div>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div style={S.label}>{isEn ? 'LIVE BIRTH CHART' : '实时八字预览'}</div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
             {pls.map(p => (
@@ -837,7 +941,12 @@ function Dashboard({ user, setUser, onLogout }) {
     return Math.max(0,a);
   }, [by,bm,bd]);
 
-  const bazi = useMemo(()=>calcBazi(by,bm,bd,bh), [by,bm,bd,bh]);
+  // Solar correction from user profile
+  const userSolarCorr = useMemo(() =>
+    user.birthLon != null ? calcSolarCorrection(by, bm, bd, user.birthLon) : (user.solarCorrection || null),
+  [by, bm, bd, user.birthLon, user.solarCorrection]);
+
+  const bazi = useMemo(()=>calcBazi(by,bm,bd,bh, userSolarCorr?.totalMinutes), [by,bm,bd,bh,userSolarCorr]);
   const dy = useMemo(()=>calcDY(bazi,age,sex), [bazi,age,sex]);
   const ln = useMemo(()=>calcLN(new Date().getFullYear()), []);
   // 时空快进：根据 timeOffset 计算目标月份的五行力量
@@ -998,7 +1107,8 @@ function Dashboard({ user, setUser, onLogout }) {
           hour: bazi.hour[0] + bazi.hour[1],
         },
         baziStr, dayMaster: bazi.dm, dayMasterElement: bazi.dme,
-        dayun: dy, liunian: ln, wuxing: destWX, findings, lang: locale
+        dayun: dy, liunian: ln, wuxing: destWX, findings, lang: locale,
+        solarCorrection: userSolarCorr
       });
       setDst(res);
       setPipe(p=>p.map((s,i)=>i===3?{...s,st:"done"}:s));
