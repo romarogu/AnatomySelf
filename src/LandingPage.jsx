@@ -132,7 +132,7 @@ function HeroRadar({ locale }) {
   );
 }
 
-export default function LandingPage({ onEnter }) {
+export default function LandingPage({ onEnter, onMethodology }) {
   const { locale, toggleLang } = useI18n();
   const t = L[locale] || L.en;
 
@@ -158,6 +158,7 @@ export default function LandingPage({ onEnter }) {
       <nav style={{ position:"fixed", top:0, width:"100%", zIndex:90, padding:"16px 40px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(8,8,10,.8)", backdropFilter:"blur(12px)", borderBottom:"1px solid rgba(196,162,101,.06)" }}>
         <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:14, color:"#c4a265", letterSpacing:3 }}>ANATOMYSELF</div>
         <div style={{ display:"flex", gap:20, alignItems:"center" }}>
+          <button onClick={onMethodology} style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:"#6a5a35", letterSpacing:1.5, cursor:"pointer", background:"none", border:"none" }}>{locale==='en'?'METHODOLOGY':'方法论'}</button>
           <button onClick={toggleLang} style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:"#9a9488", letterSpacing:1, cursor:"pointer", background:"none", border:"none" }}>{locale==='en'?'中文':'EN'}</button>
           <button onClick={onEnter} className="lp-cta" style={{ padding:"10px 24px", border:"1px solid rgba(196,162,101,.3)", color:"#c4a265", fontFamily:"'JetBrains Mono',monospace", fontSize:12, letterSpacing:1.5, cursor:"pointer", background:"transparent" }}>{t.cta}</button>
         </div>
@@ -274,6 +275,9 @@ export default function LandingPage({ onEnter }) {
       <footer style={{ padding:40, textAlign:"center", borderTop:"1px solid rgba(196,162,101,.04)" }}>
         <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3a3832", letterSpacing:2 }}>{t.footer1}</p>
         <p style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#2a2a2a", letterSpacing:1, marginTop:8 }}>{t.footer2}</p>
+        <button onClick={onMethodology} style={{ marginTop:12, fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#5e5a52", background:"none", border:"none", cursor:"pointer", letterSpacing:1.5, textDecoration:"underline", textUnderlineOffset:3 }}>
+          {locale==='en'?'Read our Methodology':'阅读方法论白皮书'}
+        </button>
       </footer>
     </div>
   );

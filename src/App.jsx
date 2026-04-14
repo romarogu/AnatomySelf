@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { useI18n } from "./i18n/index.jsx";
 import { generateLifeBlueprintPDF, generateWeeklyGuidePDF } from "./ReportGenerator.jsx";
 import LandingPage from "./LandingPage.jsx";
+import MethodologyPage from "./MethodologyPage.jsx";
 import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiLogout, apiSaveUser, apiChat } from "./api.js";
 
 // ════════════════════════════════════════
@@ -745,6 +746,7 @@ export default function App() {
   const [setupDone, setSetupDone] = useState(false);
   const [ready, setReady] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showMethodology, setShowMethodology] = useState(false);
 
   useEffect(() => { setTimeout(()=>setReady(true), 100); }, []);
 
@@ -765,7 +767,8 @@ export default function App() {
   const handleLogout = useCallback(() => { apiLogout(); setUser(null); setSetupDone(false); }, []);
 
   // Show auth screen
-  if (!user && !showAuth) return <LandingPage onEnter={() => setShowAuth(true)} />;
+  if (showMethodology) return <MethodologyPage onBack={() => setShowMethodology(false)} />;
+  if (!user && !showAuth) return <LandingPage onEnter={() => setShowAuth(true)} onMethodology={() => setShowMethodology(true)} />;
   if (!user) return <AuthScreen onLogin={handleLogin} onBack={() => setShowAuth(false)} />;
   if (!setupDone) return <BirthSetup user={user} onSave={handleBirthSave} />;
 
