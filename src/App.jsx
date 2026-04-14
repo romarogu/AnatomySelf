@@ -892,6 +892,15 @@ function Dashboard({ user, setUser, onLogout }) {
   const mName = (key) => locale === 'en' ? (RR_EN_SHORT[key] || key) : (RR[key]?.cn || key);
   const mNameFull = (key) => locale === 'en' ? (RR_EN[key] || key) : (RR[key]?.cn || key);
   const statusText = (st) => locale === 'en' ? (st === '偏高' ? 'High' : st === '偏低' ? 'Low' : st) : st;
+  // Normalize organ_wuxing — AI may return English element names instead of Chinese characters
+  const normalizeEl = (el) => {
+    if ('木火土金水'.includes(el)) return el;
+    const map = { 'Wood':'木','Fire':'火','Earth':'土','Metal':'金','Water':'水',
+                  'wood':'木','fire':'火','earth':'土','metal':'金','water':'水',
+                  'Liver':'木','Heart':'火','Spleen':'土','Lung':'金','Kidney':'水',
+                  'Hepatic':'木','Cardiovascular':'火','Metabolic':'土','Respiratory':'金','Renal':'水' };
+    return map[el] || el;
+  };
   const isDiscovery = !!user.discoveryMode;
   // Ensure all 15 standard slots exist, merging any saved data
   const initMetrics = useMemo(() => {
@@ -1199,8 +1208,8 @@ function Dashboard({ user, setUser, onLogout }) {
 
     // Build impact rows
     const impacts=WX_GROUPS.map(g=>{
-      const si=(sci?.items||[]).find(it=>it.organ_system===g.el);
-      const di=(dst?.collision_items||[]).find(it=>it.organ_wuxing===g.el);
+      const si=(sci?.items||[]).find(it=>normalizeEl(it.organ_system)===g.el);
+      const di=(dst?.collision_items||[]).find(it=>normalizeEl(it.organ_wuxing)===g.el);
       if(!si&&!di) return '';
       const isCrit=si?.severity==='critical'||si?.severity==='severe';
       return `<div class="impact" style="border-left-color:${EC[g.el]};${isCrit?'border-left-width:3px;':''}">
@@ -1906,8 +1915,8 @@ ${days.map(d=>`<div class="day">
                   <div>
                     <div style={{ ...S.mono, fontSize:".65rem", color:"#3a3832", letterSpacing:".2em", marginBottom:10 }}>IMPACT CARDS</div>
                     {WX_GROUPS.map(g => {
-                      const sciItem = (sci?.items || []).find(it => it.organ_system === g.el);
-                      const dstItem = (dst?.collision_items || []).find(it => it.organ_wuxing === g.el);
+                      const sciItem = (sci?.items || []).find(it => normalizeEl(it.organ_system) === g.el);
+                      const dstItem = (dst?.collision_items || []).find(it => normalizeEl(it.organ_wuxing) === g.el);
                       if (!sciItem && !dstItem) return null;
                       const coll = colls.find(c => c.el === g.el);
                       const isCritical = sciItem?.severity === "critical" || sciItem?.severity === "severe";
