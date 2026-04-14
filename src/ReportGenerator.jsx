@@ -56,11 +56,33 @@ function radarSVG(med, dest, isEn) {
 }
 
 async function htmlToPDF(container, filename) {
-  const canvas = await html2canvas(container, { backgroundColor:'#faf8f4', scale:2, useCORS:true, logging:false });
+  // html2canvas needs the element to be in the visible viewport area
+  // Use absolute positioning at top-left, behind everything
+  container.style.position = 'absolute';
+  container.style.left = '0';
+  container.style.top = '0';
+  container.style.zIndex = '-1';
+  container.style.opacity = '1'; // Must be visible for html2canvas
+
+  // Wait for fonts and images to load
+  await new Promise(r => setTimeout(r, 300));
+
+  const canvas = await html2canvas(container, {
+    backgroundColor: '#faf8f4',
+    scale: 2,
+    useCORS: true,
+    logging: false,
+    width: container.offsetWidth,
+    height: container.offsetHeight,
+    scrollX: 0,
+    scrollY: -window.scrollY,
+  });
+
   const imgData = canvas.toDataURL('image/png');
-  const pdfW = 210, pdfH = (canvas.height*pdfW)/canvas.width;
-  const doc = new jsPDF({orientation:'p', unit:'mm', format:[pdfW, Math.max(pdfH,297)]});
-  doc.addImage(imgData,'PNG',0,0,pdfW,pdfH);
+  const pdfW = 210;
+  const pdfH = (canvas.height * pdfW) / canvas.width;
+  const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [pdfW, Math.max(pdfH, 297)] });
+  doc.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
   doc.save(filename);
 }
 
@@ -72,7 +94,7 @@ export async function generateLifeBlueprintPDF(data, locale) {
   const isEn = locale === 'en';
 
   const c = document.createElement('div');
-  c.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:52px 60px;font-size:14px;line-height:1.7;';
+  c.style.cssText = 'position:absolute;left:0;top:0;z-index:-1;width:800px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:52px 60px;font-size:14px;line-height:1.7;';
   document.body.appendChild(c);
 
   const sevColor = (s)=> s==='critical'||s==='severe'?'#a02020':s==='moderate'?'#b07a10':'#2a7a5a';
@@ -199,7 +221,7 @@ export async function generateWeeklyGuidePDF(data, locale) {
   const isEn = locale === 'en';
 
   const c = document.createElement('div');
-  c.style.cssText = 'position:fixed;left:-9999px;top:0;width:520px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:44px 40px;font-size:14px;';
+  c.style.cssText = 'position:absolute;left:0;top:0;z-index:-1;width:520px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:44px 40px;font-size:14px;';
   document.body.appendChild(c);
 
   c.innerHTML = `
