@@ -62,9 +62,18 @@ ${JSON.stringify(chartData, null, 2)}
 BaZi: ${baziStr} | Date: ${Y}/${M}
 ${astroNote ? 'ASTRONOMICAL NOTE: ' + astroNote : ''}
 
-Interpret the EXACT data above. Return JSON:
+Interpret the EXACT data above.
+IMPORTANT: Generate collision_items for ALL 5 element systems (Wood 木, Fire 火, Earth 土, Metal 金, Water 水). The organ_wuxing field MUST be the Chinese character only: 木 or 火 or 土 or 金 or 水. Analyze how current luck pillar and annual pillar affect each organ system.
+
+Return JSON:
 {"bazi_analysis":{"pillars":"pillar breakdown","pattern":"pattern+gods","health_map":"organ strengths/weaknesses"},
-"collision_items":[{"organ_wuxing":"element char","current_forces":"","risk_window":"","prevention":""}],
+"collision_items":[
+  {"organ_wuxing":"木","current_forces":"Wood/Liver analysis","risk_window":"","prevention":""},
+  {"organ_wuxing":"火","current_forces":"Fire/Heart analysis","risk_window":"","prevention":""},
+  {"organ_wuxing":"土","current_forces":"Earth/Spleen analysis","risk_window":"","prevention":""},
+  {"organ_wuxing":"金","current_forces":"Metal/Lung analysis","risk_window":"","prevention":""},
+  {"organ_wuxing":"水","current_forces":"Water/Kidney analysis","risk_window":"","prevention":""}
+],
 "life_tuning":{"medical_advice":["","",""],"destiny_advice":["with colors/directions/foods","",""]},
 "temporal_outlook":"12-month from ${Y}/${M}",
 "key_dates":["Month Year: reason"]}` :
@@ -75,9 +84,17 @@ ${JSON.stringify(chartData, null, 2)}
 八字：${baziStr} | 日期：${Y}年${M}月
 ${astroNote ? '【天文备注】' + astroNote : ''}
 
-基于以上精确数据解释。返回JSON：
+基于以上精确数据解释。重要：为五个五行系统都生成collision_items（木火土金水），分析当前大运流年对每个脏腑的影响。
+
+返回JSON：
 {"bazi_analysis":{"pillars":"四柱","pattern":"格局+用忌神","health_map":"脏腑强弱"},
-"collision_items":[{"organ_wuxing":"五行字","current_forces":"","risk_window":"","prevention":""}],
+"collision_items":[
+  {"organ_wuxing":"木","current_forces":"","risk_window":"","prevention":""},
+  {"organ_wuxing":"火","current_forces":"","risk_window":"","prevention":""},
+  {"organ_wuxing":"土","current_forces":"","risk_window":"","prevention":""},
+  {"organ_wuxing":"金","current_forces":"","risk_window":"","prevention":""},
+  {"organ_wuxing":"水","current_forces":"","risk_window":"","prevention":""}
+],
 "life_tuning":{"medical_advice":["","",""],"destiny_advice":["含颜色方位食物","",""]},
 "temporal_outlook":"${Y}年${M}月起12月展望",
 "key_dates":["年月：原因"]}`;
