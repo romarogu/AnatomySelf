@@ -1081,34 +1081,41 @@ function Dashboard({ user, setUser, onLogout }) {
   const doDst = useCallback(async () => {
     setDstL(true); setDst(null); setPipe(p=>p.map((s,i)=>i===3?{...s,st:"running"}:s));
 
-    // 构建 findings：优先用科学脑结果，否则用原始指标概况
+    // Build findings from science brain or raw metrics
     let findings;
     if (sci && sci.items && sci.items.length > 0) {
-      findings = sci.items.map(it => it.metric_cn + "(" + it.organ_system + "): " + it.physiological_analysis).join("\n");
+      findings = sci.items.map(it => (it.metric||it.metric_cn) + "(" + it.organ_system + "): " + (it.clinical_fact||it.physiological_analysis)).join("\n");
     } else if (anoms.length > 0) {
-      findings = anoms.map(a => a.ref.cn + "(" + a.ref.o + "): " + a.key + "=" + a.value + a.ref.u + " " + a.st).join("\n");
+      findings = anoms.map(a => a.key + "(" + a.ref.o + "): " + a.value + a.ref.u).join("\n");
     } else {
-      // 全部正常 → 告知命理脑当前健康状况良好，让它聚焦先天格局分析
-      const filledMetrics = metrics.filter(m => m.value != null);
-      const summary = filledMetrics.map(m => {
-        const ref = gR(m.key, age, sex);
-        return ref ? `${ref.cn}(${ref.o}): ${m.value}${ref.u} 正常` : null;
-      }).filter(Boolean).join("\n");
-      findings = "所有体检指标均在正常范围内。\n" + (summary || "暂无录入指标。") +
-        "\n\n请重点分析：1) 八字先天五行格局中哪些脏腑为薄弱环节；2) 当前大运流年对各脏腑的影响趋势；3) 虽然体检正常但命理上需要长期关注的方向。";
+      findings = locale==='en' ? 'All biomarkers within normal range.' : '所有体检指标均在正常范围内。';
     }
+
+    // Build comprehensive deterministic JSON — AI must NOT recalculate these
+    const chartData = {
+      chart: {
+        year: bazi.year[0]+bazi.year[1],
+        month: bazi.month[0]+bazi.month[1],
+        day: bazi.day[0]+bazi.day[1],
+        hour: bazi.hour[0]+bazi.hour[1],
+      },
+      dayMaster: bazi.dm,
+      dayMasterElement: bazi.dme,
+      elementsBalance: destWX,
+      currentLuckPillar: dy.lbl + ' (' + dy.el + ')',
+      annualPillar: ln.lbl + ' (' + ln.el + ')',
+      // Astronomical note — only if solar correction was applied
+      astronomicalNote: userSolarCorr ? (locale==='en'
+        ? `True Solar Time correction applied: ${userSolarCorr.description}. The sun reached its zenith at 12:${String(Math.abs(Math.round(userSolarCorr.totalMinutes))).padStart(2,'0')} PM local time, not 12:00 PM. Birth hour pillar was calculated using corrected solar time.`
+        : `已应用真太阳时校正：${userSolarCorr.description}。太阳在当地时间 12:${String(Math.abs(Math.round(userSolarCorr.totalMinutes))).padStart(2,'0')} 到达天顶，而非 12:00。时柱基于校正后的太阳时推算。`
+      ) : null,
+      healthFindings: findings,
+    };
 
     try {
       const res = await apiDestiny({
-        baziPillars: {
-          year: bazi.year[0] + bazi.year[1],
-          month: bazi.month[0] + bazi.month[1],
-          day: bazi.day[0] + bazi.day[1],
-          hour: bazi.hour[0] + bazi.hour[1],
-        },
-        baziStr, dayMaster: bazi.dm, dayMasterElement: bazi.dme,
-        dayun: dy, liunian: ln, wuxing: destWX, findings, lang: locale,
-        solarCorrection: userSolarCorr
+        chartData,
+        baziStr, lang: locale
       });
       setDst(res);
       setPipe(p=>p.map((s,i)=>i===3?{...s,st:"done"}:s));
@@ -1117,7 +1124,7 @@ function Dashboard({ user, setUser, onLogout }) {
       setPipe(p=>p.map((s,i)=>i===3?{...s,st:"idle"}:s));
     }
     setDstL(false);
-  }, [sci, anoms, metrics, age, sex, baziStr, bazi, dy, ln, destWX, locale]);
+  }, [sci, anoms, metrics, age, sex, baziStr, bazi, dy, ln, destWX, locale, userSolarCorr]);
 
   useEffect(() => {
     // Auto-trigger destiny brain when science completes

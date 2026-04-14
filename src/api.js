@@ -41,15 +41,15 @@ export async function apiScience({ age, sex, anomalies, allMetrics, lang }) {
   return resp.json();
 }
 
-export async function apiDestiny({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang, solarCorrection }) {
+export async function apiDestiny({ chartData, baziStr, lang }) {
   const resp = await fetch('/api/destiny', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ baziPillars, baziStr, dayMaster, dayMasterElement, dayun, liunian, wuxing, findings, lang, solarCorrection }),
+    body: JSON.stringify({ chartData, baziStr, lang }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
-    throw new Error(err.error || '命理分析请求失败');
+    throw new Error(err.error || 'Meta analysis request failed');
   }
   return resp.json();
 }
