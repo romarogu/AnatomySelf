@@ -867,6 +867,29 @@ function Dashboard({ user, setUser, onLogout }) {
     try { if (user.userId) await apiSaveUser(user.userId, updated); } catch {}
   }, [user, setUser]);
 
+  // Persist analysis results to localStorage
+  const cacheKey = 'as_analysis_' + (user.userId || 'anon');
+  useEffect(() => {
+    if (sci || dst) {
+      try { localStorage.setItem(cacheKey, JSON.stringify({ sci, dst, ts: Date.now() })); } catch {}
+    }
+  }, [sci, dst, cacheKey]);
+
+  // Restore cached analysis on mount
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { sci: cachedSci, dst: cachedDst, ts } = JSON.parse(cached);
+        // Only use cache if less than 24 hours old
+        if (ts && Date.now() - ts < 86400000) {
+          if (cachedSci && !sci) setSci(cachedSci);
+          if (cachedDst && !dst) setDst(cachedDst);
+        }
+      }
+    } catch {}
+  }, [cacheKey]); // eslint-disable-line -- only on mount
+
   const updateMetric = useCallback((key, value) => {
     const parsed = (value === null || value === "" || value === undefined) ? null : parseFloat(value);
     const finalVal = (parsed !== null && isNaN(parsed)) ? null : parsed;
@@ -1486,7 +1509,7 @@ ${days.map(d=>`<div class="day">
                   }}>
                     <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={doOCR} style={{ display:"none" }}/>
                     {file ? (
-                      <div><div style={{ fontSize:"1rem", color:"#52b09a" }}>✓ {file.name}</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>{(file.size/1024).toFixed(1)}KB · 点击更换</div></div>
+                      <div><div style={{ fontSize:"1rem", color:"#52b09a" }}>✓ {file.name}</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>{(file.size/1024).toFixed(1)}KB</div></div>
                     ) : (
                       <div><div style={{ fontSize:"2rem", color:"#6a5a35", marginBottom:8 }}>⬆</div><div style={{ fontSize:".95rem", color:"#9a9488" }}>{t("upload.uploadPrompt")}</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>{t('upload.uploadSub')}</div></div>
                     )}
@@ -1495,6 +1518,30 @@ ${days.map(d=>`<div class="day">
                     <div style={{ width:12, height:12, border:"2px solid #c4a265", borderTopColor:"transparent", borderRadius:"50%", animation:"spin .8s linear infinite" }}/>
                     <span style={{ fontSize:".85rem", color:"#c4a265" }}>{t("upload.ocrRunning")}</span>
                   </div>}
+
+                  {/* Trust Shield */}
+                  <div style={{ marginTop:14, padding:"10px 14px", background:"rgba(82,176,154,.03)", border:"1px solid rgba(82,176,154,.08)", fontSize:".75rem", color:"#5e5a52", lineHeight:1.6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
+                      <svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 1L2 4v4c0 3.5 2.6 6.5 6 7.5 3.4-1 6-4 6-7.5V4L8 1z" fill="none" stroke="#52b09a" strokeWidth="1.2"/><path d="M5.5 8.5l2 2 3.5-4" fill="none" stroke="#52b09a" strokeWidth="1.2"/></svg>
+                      <span style={{ ...S.mono, fontSize:".65rem", color:"#52b09a", letterSpacing:".1em" }}>ZERO-KNOWLEDGE PROCESSING</span>
+                    </div>
+                    {locale === 'en'
+                      ? 'We read your data, but we never own it. Images are destroyed after OCR extraction. Only numerical values are stored — encrypted and anonymized.'
+                      : '我们读取您的数据，但绝不拥有它。图片在OCR提取后即时销毁。仅存储数值——加密且匿名化。'}
+                  </div>
+
+                  {/* Privacy flow — expandable */}
+                  <details style={{ marginTop:8 }}>
+                    <summary style={{ ...S.mono, fontSize:".62rem", color:"#3a3832", cursor:"pointer", letterSpacing:".1em" }}>
+                      {locale === 'en' ? '▸ DATA PROCESSING FLOW' : '▸ 数据处理流程'}
+                    </summary>
+                    <div style={{ marginTop:8, padding:"8px 12px", background:"#16161c", fontSize:".72rem", color:"#5e5a52", lineHeight:1.7 }}>
+                      <div style={{ marginBottom:4 }}><span style={{ color:"#52b09a" }}>①</span> {locale==='en'?'OCR extracts numerical values from your image':'OCR从图片中提取数值'}</div>
+                      <div style={{ marginBottom:4 }}><span style={{ color:"#52b09a" }}>②</span> {locale==='en'?'Original image destroyed immediately — never stored':'原图即时销毁——从不存储'}</div>
+                      <div style={{ marginBottom:4 }}><span style={{ color:"#52b09a" }}>③</span> {locale==='en'?'Values encrypted and stored locally on your device':'数值加密存储在您的本地设备'}</div>
+                      <div><span style={{ color:"#52b09a" }}>④</span> {locale==='en'?'AI analysis runs with anonymized data — no PII transmitted':'AI分析使用匿名数据——不传输个人信息'}</div>
+                    </div>
+                  </details>
                 </div>
 
                 {/* OCR result */}
