@@ -56,34 +56,41 @@ function radarSVG(med, dest, isEn) {
 }
 
 async function htmlToPDF(container, filename) {
-  // html2canvas needs the element to be in the visible viewport area
-  // Use absolute positioning at top-left, behind everything
-  container.style.position = 'absolute';
+  // Ensure container is fully in the DOM and rendered
+  // Place it at the end of body, visible but scrolled out of view
+  container.style.position = 'fixed';
   container.style.left = '0';
   container.style.top = '0';
-  container.style.zIndex = '-1';
-  container.style.opacity = '1'; // Must be visible for html2canvas
+  container.style.zIndex = '99999';  // On top so browser actually paints it
+  container.style.pointerEvents = 'none';
+  container.style.overflow = 'visible';
 
-  // Wait for fonts and images to load
-  await new Promise(r => setTimeout(r, 300));
+  // Force a layout pass
+  void container.offsetHeight;
 
-  const canvas = await html2canvas(container, {
-    backgroundColor: '#faf8f4',
-    scale: 2,
-    useCORS: true,
-    logging: false,
-    width: container.offsetWidth,
-    height: container.offsetHeight,
-    scrollX: 0,
-    scrollY: -window.scrollY,
-  });
+  // Wait for fonts and SVG to render
+  await new Promise(r => setTimeout(r, 500));
 
-  const imgData = canvas.toDataURL('image/png');
-  const pdfW = 210;
-  const pdfH = (canvas.height * pdfW) / canvas.width;
-  const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [pdfW, Math.max(pdfH, 297)] });
-  doc.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
-  doc.save(filename);
+  try {
+    const canvas = await html2canvas(container, {
+      backgroundColor: '#faf8f4',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowWidth: container.scrollWidth,
+      windowHeight: container.scrollHeight,
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdfW = 210;
+    const pdfH = (canvas.height * pdfW) / canvas.width;
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [pdfW, Math.max(pdfH, 297)] });
+    doc.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+    doc.save(filename);
+  } finally {
+    // Always remove, even on error
+    if (container.parentNode) container.parentNode.removeChild(container);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -94,7 +101,7 @@ export async function generateLifeBlueprintPDF(data, locale) {
   const isEn = locale === 'en';
 
   const c = document.createElement('div');
-  c.style.cssText = 'position:absolute;left:0;top:0;z-index:-1;width:800px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:52px 60px;font-size:14px;line-height:1.7;';
+  c.style.cssText = 'width:800px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:52px 60px;font-size:14px;line-height:1.7;';
   document.body.appendChild(c);
 
   const sevColor = (s)=> s==='critical'||s==='severe'?'#a02020':s==='moderate'?'#b07a10':'#2a7a5a';
@@ -210,7 +217,6 @@ export async function generateLifeBlueprintPDF(data, locale) {
   `;
 
   await htmlToPDF(c, `AnatomySelf_LifeBlueprint_${date.replace(/\./g,'')}.pdf`);
-  document.body.removeChild(c);
 }
 
 // ═══════════════════════════════════════
@@ -221,7 +227,7 @@ export async function generateWeeklyGuidePDF(data, locale) {
   const isEn = locale === 'en';
 
   const c = document.createElement('div');
-  c.style.cssText = 'position:absolute;left:0;top:0;z-index:-1;width:520px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:44px 40px;font-size:14px;';
+  c.style.cssText = 'width:520px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:44px 40px;font-size:14px;';
   document.body.appendChild(c);
 
   c.innerHTML = `
@@ -266,5 +272,4 @@ export async function generateWeeklyGuidePDF(data, locale) {
   `;
 
   await htmlToPDF(c, `AnatomySelf_WeeklyGuide_${date.replace(/[\.\/ ]/g,'')}.pdf`);
-  document.body.removeChild(c);
 }
