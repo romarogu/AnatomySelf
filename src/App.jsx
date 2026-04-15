@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import * as d3 from "d3";
 import { useI18n } from "./i18n/index.jsx";
 import { generateLifeBlueprintPDF, generateWeeklyGuidePDF } from "./ReportGenerator.jsx";
+import { ShareCard } from "./ShareCard.jsx";
 import LandingPage from "./LandingPage.jsx";
 import MethodologyPage from "./MethodologyPage.jsx";
 import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiLogout, apiSaveUser, apiChat } from "./api.js";
@@ -940,7 +941,8 @@ function Dashboard({ user, setUser, onLogout }) {
   const [chatLoading, setChatLoading] = useState(false);
   // Radar interaction state
   const [selectedDim, setSelectedDim] = useState(null);
-  const [timeOffset, setTimeOffset] = useState(0); // Reserved for temporal navigation
+  const [timeOffset, setTimeOffset] = useState(0);
+  const [showShare, setShowShare] = useState(false);
 
   const by=user.birthYear, bm=user.birthMonth, bd=user.birthDay, bh=user.birthHour, sex=user.sex;
 
@@ -1433,6 +1435,9 @@ ${days.map(d=>`<div class="day">
     <div style={{ minHeight:"100vh", background:"#08080a", color:"#e0dcd4", fontFamily:"'Noto Serif SC',serif", fontSize:"14px",
       backgroundImage:"linear-gradient(rgba(196,162,101,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(196,162,101,.015) 1px,transparent 1px)", backgroundSize:"60px 60px" }}>
 
+      {/* SHARE CARD */}
+      {showShare && <ShareCard bazi={bazi} destWX={destWX} locale={locale} onClose={()=>setShowShare(false)} />}
+
       {/* LOADING RITUAL */}
       {analysisActive && (
         <div style={{
@@ -1548,6 +1553,11 @@ ${days.map(d=>`<div class="day">
               {locale === 'en' ? '中' : 'EN'}
             </span>
           </div>
+          {/* Share button */}
+          <button onClick={()=>setShowShare(true)} style={{ background:"none", border:"1px solid rgba(196,162,101,.1)", color:"#6a5a35", padding:"4px 10px", fontSize:".72rem", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace", borderRadius:2 }}
+            title={locale==='en'?'Share your blueprint':'分享你的蓝图'}>
+            ⬡
+          </button>
           <button onClick={onLogout} style={{ background:"rgba(196,64,64,.06)", border:"1px solid rgba(196,64,64,.2)", color:"#c44040", padding:"4px 14px", fontSize:".8rem", cursor:"pointer", fontFamily:"'Noto Serif SC',serif", borderRadius:2, transition:"all .2s" }}
             onMouseEnter={e=>{e.target.style.background="rgba(196,64,64,.15)";}} onMouseLeave={e=>{e.target.style.background="rgba(196,64,64,.06)";}}>
             {t('header.logout')}
@@ -1760,7 +1770,7 @@ ${days.map(d=>`<div class="day">
 
           {/* ══ COLLISION ANALYSIS (merged radar + insights) ══ */}
           {tab==="radar" && (
-            <div style={{ display:"grid", gridTemplateColumns:"360px 1fr", gap:20 }}>
+            <div className="as-main-grid" style={{ display:"grid", gridTemplateColumns:"360px 1fr", gap:20 }}>
               {/* LEFT: Radar + dimension list */}
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div style={{ ...S.card, position:"relative", overflow:"hidden" }}>
@@ -2372,6 +2382,11 @@ ${days.map(d=>`<div class="day">
         ::-webkit-scrollbar { width:4px; }
         ::-webkit-scrollbar-thumb { background:#6a5a35; border-radius:2px; }
         input[type=number]::-webkit-inner-spin-button { opacity:.3; }
+        @media(max-width:860px) {
+          .as-main-grid { grid-template-columns:1fr !important; }
+          .as-sidebar { display:none !important; }
+          .as-impact-grid { grid-template-columns:1fr !important; }
+        }
       `}</style>
     </div>
   );
