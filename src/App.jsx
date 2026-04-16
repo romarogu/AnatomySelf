@@ -5,7 +5,7 @@ import { generateLifeBlueprintPDF, generateWeeklyGuidePDF } from "./ReportGenera
 import { ShareCard } from "./ShareCard.jsx";
 import LandingPage from "./LandingPage.jsx";
 import MethodologyPage from "./MethodologyPage.jsx";
-import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiLogout, apiSaveUser, apiChat } from "./api.js";
+import { apiOCR, apiScience, apiDestiny, apiRegister, apiLogin, apiLogout, apiGetSession, apiSaveProfile, apiLoadMetrics, apiSaveMetrics, apiSaveAnalysis, apiLoadLatestAnalysis, apiChat } from "./api.js";
 
 // ════════════════════════════════════════
 // BAZI ENGINE
@@ -537,25 +537,26 @@ const INIT_M = [
 function AuthScreen({ onLogin, onBack }) {
   const { t, locale, toggleLang } = useI18n();
   const [mode, setMode] = useState("login");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!username.trim() || !password.trim()) { setError(t('auth.fillBoth')); return; }
+    if (!email.trim() || !password.trim()) { setError(locale==='en'?'Please fill email and password':'请填写邮箱和密码'); return; }
+    if (mode === 'register' && !username.trim()) { setError(locale==='en'?'Please enter a username':'请输入用户名'); return; }
+    setError(''); setLoading(true);
     try {
       if (mode === "register") {
-        const res = await apiRegister(username.trim(), password);
-        if (res.error) { setError(res.error); return; }
-        onLogin({ userId: res.userId, username: res.username, birthYear:1990, birthMonth:6, birthDay:15, birthHour:12, sex:"M", metrics:INIT_M });
+        const res = await apiRegister(email.trim(), password, username.trim());
+        onLogin({ userId: res.userId, email: res.email, username: res.username });
       } else {
-        const res = await apiLogin(username.trim(), password);
-        if (res.error) { setError(res.error); return; }
-        const userData = { userId: res.userId, username: res.username, ...res.data };
-        if (!userData.metrics) userData.metrics = INIT_M;
-        onLogin(userData);
+        const res = await apiLogin(email.trim(), password);
+        onLogin(res);
       }
-    } catch (err) { setError(t('auth.networkError') + ": " + err.message); }
+    } catch (err) { setError(err.message); }
+    setLoading(false);
   };
 
   return (
@@ -597,18 +598,25 @@ function AuthScreen({ onLogin, onBack }) {
         {/* Form */}
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div>
-            <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{t('auth.username')}</div>
-            <input value={username} onChange={e=>setUsername(e.target.value)} placeholder={t('auth.usernamePh')}
-              style={S.input} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
+            <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{locale==='en'?'Email':'邮箱'}</div>
+            <input value={email} onChange={e=>setEmail(e.target.value)} placeholder={locale==='en'?'your@email.com':'your@email.com'}
+              type="email" style={S.input} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
+          {mode === 'register' && (
+            <div>
+              <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{locale==='en'?'Username':'用户名'}</div>
+              <input value={username} onChange={e=>setUsername(e.target.value)} placeholder={locale==='en'?'Choose a username':'选择用户名'}
+                style={S.input} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
+            </div>
+          )}
           <div>
-            <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{t('auth.password')}</div>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={t('auth.passwordPh')}
+            <div style={{ fontSize:"0.85rem", color:"#9a9488", marginBottom:6 }}>{locale==='en'?'Password':'密码'}</div>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={locale==='en'?'Min 6 characters':'至少6位'}
               style={S.input} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
           {error && <div style={{ fontSize:"0.85rem", color:"#c44040", padding:"8px 12px", background:"rgba(196,64,64,0.06)", border:"1px solid rgba(196,64,64,0.15)" }}>{error}</div>}
-          <button onClick={handleSubmit} style={{...S.btn, width:"100%", marginTop:8}}>
-            {mode==="login"?t('auth.loginBtn'):t('auth.registerBtn')}
+          <button onClick={handleSubmit} disabled={loading} style={{...S.btn, width:"100%", marginTop:8, opacity:loading?.6:1}}>
+            {loading ? '...' : mode==="login"?(locale==='en'?'Sign In':'登录'):(locale==='en'?'Create Account':'注册')}
           </button>
         </div>
 
@@ -852,24 +860,53 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setTimeout(()=>setReady(true), 100); }, []);
+  // Check existing session on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const session = await apiGetSession();
+        if (session) {
+          setUser(session);
+          setSetupDone(!!session.setupComplete);
+        }
+      } catch {}
+      setLoading(false);
+      setReady(true);
+    })();
+  }, []);
 
   // Auth handlers
-  const handleLogin = useCallback((userData) => { setUser(userData); setSetupDone(!!userData.setupComplete); setShowAuth(false); }, []);
+  const handleLogin = useCallback((userData) => {
+    setUser(userData);
+    setSetupDone(!!userData.setupComplete);
+    setShowAuth(false);
+  }, []);
 
   const handleBirthSave = useCallback(async (birthData) => {
     const updated = { ...user, ...birthData, setupComplete: true };
     setUser(updated);
     setSetupDone(true);
-    try { if (updated.userId) await apiSaveUser(updated.userId, updated); } catch {}
-    // If metrics were passed (with RHR pre-filled), store them
-    if (birthData.metrics) {
-      try { localStorage.setItem('as_metrics_' + (updated.userId || 'anon'), JSON.stringify(birthData.metrics)); } catch {}
-    }
+    try {
+      if (updated.userId) {
+        await apiSaveProfile(updated.userId, updated);
+        // Save RHR metric if provided
+        if (birthData.metrics) {
+          await apiSaveMetrics(updated.userId, birthData.metrics);
+        }
+      }
+    } catch (e) { console.error('Save error:', e); }
   }, [user]);
 
-  const handleLogout = useCallback(() => { apiLogout(); setUser(null); setSetupDone(false); }, []);
+  const handleLogout = useCallback(async () => { await apiLogout(); setUser(null); setSetupDone(false); }, []);
+
+  // Loading state
+  if (loading) return (
+    <div style={{ minHeight:"100vh", background:"#08080a", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:"#3a3832", letterSpacing:3 }}>ANATOMYSELF</div>
+    </div>
+  );
 
   // Show auth screen
   if (showMethodology) return <MethodologyPage onBack={() => setShowMethodology(false)} />;
@@ -990,35 +1027,35 @@ function Dashboard({ user, setUser, onLogout }) {
   const pls = [{lb:_pl[0],s:bazi.year[0],b:bazi.year[1]},{lb:_pl[1],s:bazi.month[0],b:bazi.month[1]},{lb:_pl[2],s:bazi.day[0],b:bazi.day[1]},{lb:_pl[3],s:bazi.hour[0],b:bazi.hour[1]}];
   const baziStr = pls.map(p=>p.s+p.b).join(" ");
 
-  // Save metrics to storage
+  // Save metrics to Supabase
   const saveData = useCallback(async (newMetrics) => {
     const updated = {...user, metrics: newMetrics};
     setUser(updated);
-    try { if (user.userId) await apiSaveUser(user.userId, updated); } catch {}
+    try { if (user.userId) await apiSaveMetrics(user.userId, newMetrics); } catch (e) { console.error('Metrics save error:', e); }
   }, [user, setUser]);
 
-  // Persist analysis results to localStorage
-  const cacheKey = 'as_analysis_' + (user.userId || 'anon');
+  // Persist analysis results to Supabase
   useEffect(() => {
-    if (sci || dst) {
-      try { localStorage.setItem(cacheKey, JSON.stringify({ sci, dst, ts: Date.now() })); } catch {}
+    if (sci && user.userId) {
+      apiSaveAnalysis(user.userId, 'science', sci).catch(() => {});
     }
-  }, [sci, dst, cacheKey]);
+  }, [sci]);
+  useEffect(() => {
+    if (dst && user.userId) {
+      apiSaveAnalysis(user.userId, 'destiny', dst).catch(() => {});
+    }
+  }, [dst]);
 
   // Restore cached analysis on mount
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const { sci: cachedSci, dst: cachedDst, ts } = JSON.parse(cached);
-        // Only use cache if less than 24 hours old
-        if (ts && Date.now() - ts < 86400000) {
-          if (cachedSci && !sci) setSci(cachedSci);
-          if (cachedDst && !dst) setDst(cachedDst);
-        }
-      }
-    } catch {}
-  }, [cacheKey]); // eslint-disable-line -- only on mount
+    if (!user.userId) return;
+    (async () => {
+      try {
+        if (!sci) { const cached = await apiLoadLatestAnalysis(user.userId, 'science'); if (cached) setSci(cached); }
+        if (!dst) { const cached = await apiLoadLatestAnalysis(user.userId, 'destiny'); if (cached) setDst(cached); }
+      } catch {}
+    })();
+  }, [user.userId]); // eslint-disable-line
 
   const updateMetric = useCallback((key, value) => {
     const parsed = (value === null || value === "" || value === undefined) ? null : parseFloat(value);
