@@ -2451,7 +2451,7 @@ ${days.map(d=>`<div class="day">
           display: none;
         }
 
-        @media(max-width: 860px) {
+        @media(max-width: 1024px) {
           /* Hide desktop-only elements */
           .as-desktop-only { display: none !important; }
           .as-sidebar { display: none !important; }
@@ -2461,7 +2461,7 @@ ${days.map(d=>`<div class="day">
 
           /* Main content: adjust padding, add bottom space for tab bar */
           .as-main-content {
-            padding: 14px 16px calc(80px + env(safe-area-inset-bottom)) 16px !important;
+            padding: 14px 16px calc(90px + env(safe-area-inset-bottom)) 16px !important;
             gap: 12px !important;
           }
           .as-main-wrap {
@@ -2496,9 +2496,6 @@ ${days.map(d=>`<div class="day">
 
           /* Bump up base font sizes on mobile */
           body { font-size: 16px; }
-
-          /* Header: reduce padding on mobile */
-          [class*="as-main-wrap"] + * { padding-left: 14px !important; padding-right: 14px !important; }
         }
       `}</style>
     </div>
