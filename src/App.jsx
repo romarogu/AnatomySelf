@@ -928,6 +928,13 @@ function Dashboard({ user, setUser, onLogout }) {
   const [dst, setDst] = useState(null);
   const [dstL, setDstL] = useState(false);
   const [tab, setTab] = useState(isDiscovery ? "radar" : "upload");
+  // Mobile detection via window width — more reliable than CSS media queries
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth <= 860);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 860);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [pipe, setPipe] = useState([{lb:"Upload",st:"idle"},{lb:"OCR",st:"idle"},{lb:"Science",st:"idle"},{lb:"Meta",st:"idle"}]);
   const fileRef = useRef(null);
   // Analysis ceremony state
@@ -1541,12 +1548,14 @@ ${days.map(d=>`<div class="day">
           </div>
         </div>
         <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-          <div className="as-desktop-only" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:3 }}>
-            {pls.map(p => <div key={p.lb} style={{ textAlign:"center", padding:"2px 5px", background:"#16161c", border:"1px solid rgba(196,162,101,.06)" }}>
-              <div style={{ fontSize:".8rem", color:"#e0dcd4", lineHeight:1.1 }}>{p.s}{p.b}</div>
-            </div>)}
-          </div>
-          <span className="as-desktop-only" style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}{t('sidebar.age')}</span>
+          {!isMobile && (
+            <div className="as-desktop-only" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:3 }}>
+              {pls.map(p => <div key={p.lb} style={{ textAlign:"center", padding:"2px 5px", background:"#16161c", border:"1px solid rgba(196,162,101,.06)" }}>
+                <div style={{ fontSize:".8rem", color:"#e0dcd4", lineHeight:1.1 }}>{p.s}{p.b}</div>
+              </div>)}
+            </div>
+          )}
+          {!isMobile && <span className="as-desktop-only" style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}{t('sidebar.age')}</span>}
           <div onClick={toggleLang} style={{ cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", width:28, height:28, borderRadius:"50%", background:"rgba(196,162,101,.04)", border:"1px solid rgba(196,162,101,.06)", transition:"all .25s", position:"relative" }}
             onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.25)";e.currentTarget.style.background="rgba(196,162,101,.08)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.06)";e.currentTarget.style.background="rgba(196,162,101,.04)";}}>
             <span style={{ fontSize:".62rem", color:"#c4a265", fontFamily:"'JetBrains Mono',monospace", fontWeight:600, letterSpacing:"-0.5px" }}>
@@ -1567,6 +1576,7 @@ ${days.map(d=>`<div class="day">
 
       <div className="as-main-wrap" style={{ display:"flex", minHeight:"calc(100vh - 50px)" }}>
         {/* SIDEBAR (desktop only) */}
+        {!isMobile && (
         <div className="as-sidebar" style={{ width:220, minWidth:220, background:"#0c0c0f", borderRight:"1px solid rgba(196,162,101,.08)", padding:"16px 14px", display:"flex", flexDirection:"column", gap:12, overflowY:"auto" }}>
           <div style={S.label}>{t('sidebar.userInfo')}</div>
           <div style={{ fontSize:".85rem", color:"#9a9488" }}>
@@ -1606,11 +1616,13 @@ ${days.map(d=>`<div class="day">
             </div>
           </div>
         </div>
+        )}
 
         {/* MAIN */}
-        <div className="as-main-content" style={{ flex:1, overflowY:"auto", padding:"20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
+        <div className="as-main-content" style={{ flex:1, overflowY:"auto", padding: isMobile ? "12px 14px 90px 14px" : "20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
           {/* MOBILE SUMMARY STRIP (horizontal scroll, replaces sidebar on mobile) */}
-          <div className="as-mobile-strip" style={{ display:"none" }}>
+          {isMobile && (
+          <div className="as-mobile-strip">
             <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:8, WebkitOverflowScrolling:"touch" }}>
               {/* Day Master card */}
               <div style={{ flexShrink:0, minWidth:130, padding:"10px 14px", background:"#16161c", border:`1px solid ${EC[bazi.dme]}33`, borderRadius:4 }}>
@@ -1650,8 +1662,10 @@ ${days.map(d=>`<div class="day">
               )}
             </div>
           </div>
+          )}
 
           {/* TABS (desktop) */}
+          {!isMobile && (
           <div className="as-desktop-only" style={{ display:"flex", gap:0, borderBottom:"1px solid rgba(196,162,101,.08)" }}>
             {tabs.map(t => (
               <button key={t.id} onClick={()=>setTab(t.id)} style={{
@@ -1662,6 +1676,7 @@ ${days.map(d=>`<div class="day">
               }}>{t.lb}</button>
             ))}
           </div>
+          )}
 
           {/* ══ UPLOAD ══ */}
           {tab==="upload" && (
@@ -2393,7 +2408,14 @@ ${days.map(d=>`<div class="day">
       </div>
 
       {/* MOBILE BOTTOM TAB BAR */}
-      <div className="as-mobile-tabbar">
+      {isMobile && (
+      <div style={{
+        position:"fixed", bottom:0, left:0, right:0, zIndex:50,
+        background:"rgba(8,8,10,.96)", backdropFilter:"blur(16px)",
+        borderTop:"1px solid rgba(196,162,101,.1)",
+        paddingBottom:"env(safe-area-inset-bottom)",
+        display:"flex",
+      }}>
         {[
           { id:"radar", icon:"⚡", lb:locale==='en'?"Insights":"洞察" },
           { id:"tuning", icon:"📆", lb:locale==='en'?"Daily":"日程" },
@@ -2401,17 +2423,18 @@ ${days.map(d=>`<div class="day">
           { id:"upload", icon:"📄", lb:locale==='en'?"Data":"数据" },
         ].map(item => (
           <button key={item.id} onClick={()=>setTab(item.id)} style={{
-            flex:1, background:"none", border:"none", padding:"8px 4px",
+            flex:1, background:"none", border:"none", padding:"10px 4px 8px",
             display:"flex", flexDirection:"column", alignItems:"center", gap:3,
             color: tab===item.id ? "#c4a265" : "#5e5a52",
             borderTop: tab===item.id ? "1.5px solid #c4a265" : "1.5px solid transparent",
             cursor:"pointer", fontFamily:"'Noto Serif SC',serif", transition:"all .2s",
           }}>
-            <span style={{ fontSize:18, opacity: tab===item.id ? 1 : .6 }}>{item.icon}</span>
+            <span style={{ fontSize:20, opacity: tab===item.id ? 1 : .6 }}>{item.icon}</span>
             <span style={{ fontSize:10, letterSpacing:.5 }}>{item.lb}</span>
           </button>
         ))}
       </div>
+      )}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap');
