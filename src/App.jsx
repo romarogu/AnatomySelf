@@ -1541,12 +1541,12 @@ ${days.map(d=>`<div class="day">
           </div>
         </div>
         <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:3 }}>
+          <div className="as-desktop-only" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:3 }}>
             {pls.map(p => <div key={p.lb} style={{ textAlign:"center", padding:"2px 5px", background:"#16161c", border:"1px solid rgba(196,162,101,.06)" }}>
               <div style={{ fontSize:".8rem", color:"#e0dcd4", lineHeight:1.1 }}>{p.s}{p.b}</div>
             </div>)}
           </div>
-          <span style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}{t('sidebar.age')}</span>
+          <span className="as-desktop-only" style={{ ...S.mono, fontSize:".75rem", color:"#5e5a52" }}>{user.username} · {age}{t('sidebar.age')}</span>
           <div onClick={toggleLang} style={{ cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", width:28, height:28, borderRadius:"50%", background:"rgba(196,162,101,.04)", border:"1px solid rgba(196,162,101,.06)", transition:"all .25s", position:"relative" }}
             onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.25)";e.currentTarget.style.background="rgba(196,162,101,.08)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(196,162,101,.06)";e.currentTarget.style.background="rgba(196,162,101,.04)";}}>
             <span style={{ fontSize:".62rem", color:"#c4a265", fontFamily:"'JetBrains Mono',monospace", fontWeight:600, letterSpacing:"-0.5px" }}>
@@ -1565,9 +1565,9 @@ ${days.map(d=>`<div class="day">
         </div>
       </div>
 
-      <div style={{ display:"flex", minHeight:"calc(100vh - 50px)" }}>
-        {/* SIDEBAR */}
-        <div style={{ width:220, minWidth:220, background:"#0c0c0f", borderRight:"1px solid rgba(196,162,101,.08)", padding:"16px 14px", display:"flex", flexDirection:"column", gap:12, overflowY:"auto" }}>
+      <div className="as-main-wrap" style={{ display:"flex", minHeight:"calc(100vh - 50px)" }}>
+        {/* SIDEBAR (desktop only) */}
+        <div className="as-sidebar" style={{ width:220, minWidth:220, background:"#0c0c0f", borderRight:"1px solid rgba(196,162,101,.08)", padding:"16px 14px", display:"flex", flexDirection:"column", gap:12, overflowY:"auto" }}>
           <div style={S.label}>{t('sidebar.userInfo')}</div>
           <div style={{ fontSize:".85rem", color:"#9a9488" }}>
             {by}/{bm}/{bd} {bh}:00<br/>
@@ -1608,9 +1608,51 @@ ${days.map(d=>`<div class="day">
         </div>
 
         {/* MAIN */}
-        <div style={{ flex:1, overflowY:"auto", padding:"20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
-          {/* TABS */}
-          <div style={{ display:"flex", gap:0, borderBottom:"1px solid rgba(196,162,101,.08)" }}>
+        <div className="as-main-content" style={{ flex:1, overflowY:"auto", padding:"20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
+          {/* MOBILE SUMMARY STRIP (horizontal scroll, replaces sidebar on mobile) */}
+          <div className="as-mobile-strip" style={{ display:"none" }}>
+            <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:8, WebkitOverflowScrolling:"touch" }}>
+              {/* Day Master card */}
+              <div style={{ flexShrink:0, minWidth:130, padding:"10px 14px", background:"#16161c", border:`1px solid ${EC[bazi.dme]}33`, borderRadius:4 }}>
+                <div style={{ fontSize:10, color:"#6a5a35", letterSpacing:1.5, fontFamily:"'JetBrains Mono',monospace", marginBottom:4 }}>DAY MASTER</div>
+                <div style={{ fontSize:22, color:EC[bazi.dme], lineHeight:1, fontWeight:300 }}>{bazi.dm}</div>
+                <div style={{ fontSize:11, color:"#9a9488", marginTop:2 }}>{user.username} · {age}{t('sidebar.age')}</div>
+              </div>
+              {/* Five Element mini-bars */}
+              <div style={{ flexShrink:0, minWidth:180, padding:"10px 14px", background:"#16161c", border:"1px solid rgba(196,162,101,.1)", borderRadius:4 }}>
+                <div style={{ fontSize:10, color:"#6a5a35", letterSpacing:1.5, fontFamily:"'JetBrains Mono',monospace", marginBottom:6 }}>FIVE ELEMENTS</div>
+                {["火","木","土","金","水"].map(el => {
+                  const sc = Math.round(medWX[el]);
+                  return (
+                    <div key={el} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
+                      <span style={{ fontSize:11, color:EC[el], width:14 }}>{el}</span>
+                      <div style={{ flex:1, height:3, background:"#08080a", borderRadius:1 }}>
+                        <div style={{ height:"100%", width:sc+"%", background:sc<50?"#c44040":EC[el], borderRadius:1 }}/>
+                      </div>
+                      <span style={{ fontSize:10, color:sc<50?"#c44040":"#9a9488", fontFamily:"'JetBrains Mono',monospace", width:22, textAlign:"right" }}>{sc}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Luck pillar card */}
+              <div style={{ flexShrink:0, minWidth:120, padding:"10px 14px", background:"#16161c", border:"1px solid rgba(196,162,101,.1)", borderRadius:4 }}>
+                <div style={{ fontSize:10, color:"#6a5a35", letterSpacing:1.5, fontFamily:"'JetBrains Mono',monospace", marginBottom:4 }}>LUCK · YEAR</div>
+                <div style={{ fontSize:13, color:EC[dy.el], marginBottom:2 }}>{dy.lbl}</div>
+                <div style={{ fontSize:13, color:EC[ln.el] }}>{ln.lbl}</div>
+              </div>
+              {/* Anomalies card */}
+              {anoms.length > 0 && (
+                <div style={{ flexShrink:0, minWidth:110, padding:"10px 14px", background:"rgba(196,64,64,.06)", border:"1px solid rgba(196,64,64,.2)", borderRadius:4 }}>
+                  <div style={{ fontSize:10, color:"#c44040", letterSpacing:1.5, fontFamily:"'JetBrains Mono',monospace", marginBottom:4 }}>⚠ ALERTS</div>
+                  <div style={{ fontSize:20, color:"#c44040", fontWeight:600, fontFamily:"'JetBrains Mono',monospace" }}>{anoms.length}</div>
+                  <div style={{ fontSize:10, color:"#c44040", opacity:.7 }}>{t('sidebar.items')}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* TABS (desktop) */}
+          <div className="as-desktop-only" style={{ display:"flex", gap:0, borderBottom:"1px solid rgba(196,162,101,.08)" }}>
             {tabs.map(t => (
               <button key={t.id} onClick={()=>setTab(t.id)} style={{
                 padding:"10px 18px", background:"transparent", border:"none",
@@ -2350,6 +2392,27 @@ ${days.map(d=>`<div class="day">
         </div>
       </div>
 
+      {/* MOBILE BOTTOM TAB BAR */}
+      <div className="as-mobile-tabbar">
+        {[
+          { id:"radar", icon:"⚡", lb:locale==='en'?"Insights":"洞察" },
+          { id:"tuning", icon:"📆", lb:locale==='en'?"Daily":"日程" },
+          { id:"chat", icon:"💬", lb:locale==='en'?"Chat":"对话" },
+          { id:"upload", icon:"📄", lb:locale==='en'?"Data":"数据" },
+        ].map(item => (
+          <button key={item.id} onClick={()=>setTab(item.id)} style={{
+            flex:1, background:"none", border:"none", padding:"8px 4px",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:3,
+            color: tab===item.id ? "#c4a265" : "#5e5a52",
+            borderTop: tab===item.id ? "1.5px solid #c4a265" : "1.5px solid transparent",
+            cursor:"pointer", fontFamily:"'Noto Serif SC',serif", transition:"all .2s",
+          }}>
+            <span style={{ fontSize:18, opacity: tab===item.id ? 1 : .6 }}>{item.icon}</span>
+            <span style={{ fontSize:10, letterSpacing:.5 }}>{item.lb}</span>
+          </button>
+        ))}
+      </div>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+SC:wght@200;300;400;600&family=JetBrains+Mono:wght@300;400&display=swap');
         @keyframes pulse { 0%,100% { opacity:.4; } 50% { opacity:1; } }
@@ -2382,10 +2445,60 @@ ${days.map(d=>`<div class="day">
         ::-webkit-scrollbar { width:4px; }
         ::-webkit-scrollbar-thumb { background:#6a5a35; border-radius:2px; }
         input[type=number]::-webkit-inner-spin-button { opacity:.3; }
-        @media(max-width:860px) {
-          .as-main-grid { grid-template-columns:1fr !important; }
-          .as-sidebar { display:none !important; }
-          .as-impact-grid { grid-template-columns:1fr !important; }
+
+        /* Mobile bottom tab bar — hidden on desktop */
+        .as-mobile-tabbar {
+          display: none;
+        }
+
+        @media(max-width: 860px) {
+          /* Hide desktop-only elements */
+          .as-desktop-only { display: none !important; }
+          .as-sidebar { display: none !important; }
+
+          /* Show mobile summary strip */
+          .as-mobile-strip { display: block !important; }
+
+          /* Main content: adjust padding, add bottom space for tab bar */
+          .as-main-content {
+            padding: 14px 16px calc(80px + env(safe-area-inset-bottom)) 16px !important;
+            gap: 12px !important;
+          }
+          .as-main-wrap {
+            min-height: calc(100vh - 56px) !important;
+          }
+
+          /* Collapse all grid layouts to single column */
+          .as-main-grid { grid-template-columns: 1fr !important; }
+          .as-impact-grid { grid-template-columns: 1fr !important; }
+
+          /* Global: force single column for all 2-column grids in main content */
+          .as-main-content [style*="gridTemplateColumns"][style*="1fr 1fr"],
+          .as-main-content [style*="grid-template-columns"][style*="1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+          }
+          .as-main-content [style*="gridTemplateColumns"][style*="360px"],
+          .as-main-content [style*="grid-template-columns"][style*="360px"] {
+            grid-template-columns: 1fr !important;
+          }
+
+          /* Bottom tab bar — fixed, safe area aware */
+          .as-mobile-tabbar {
+            display: flex !important;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 50;
+            background: rgba(8,8,10,.96);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(196,162,101,.1);
+            padding-bottom: env(safe-area-inset-bottom);
+          }
+
+          /* Bump up base font sizes on mobile */
+          body { font-size: 16px; }
+
+          /* Header: reduce padding on mobile */
+          [class*="as-main-wrap"] + * { padding-left: 14px !important; padding-right: 14px !important; }
         }
       `}</style>
     </div>
