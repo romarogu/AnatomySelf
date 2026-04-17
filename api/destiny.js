@@ -18,89 +18,49 @@ function parseJson(txt) {
   }
 }
 
-async function callZhipu(key, messages, maxTokens = 4000, temp = 0.3) {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 25000); // 25s per step
-  try {
-    const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
-      method: 'POST', signal: ctrl.signal,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'glm-4-plus', max_tokens: maxTokens, temperature: temp, messages }),
-    });
-    clearTimeout(t);
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => '');
-      console.log('[destiny] API status:', resp.status, errText.substring(0, 200));
-      return '';
-    }
-    const data = await resp.json();
-    return data.choices?.[0]?.message?.content || '';
-  } catch (e) { clearTimeout(t); console.log('[destiny] API error:', e.message); return ''; }
-}
+const SYSTEM_EN = `### Role: AnatomySelf Digital Alchemist (Meta Brain)
+You are a "Digital Alchemist" mastering traditional Zi-Ping BaZi and modern functional medicine. Perform an "energy audit" by cross-referencing spacetime coordinates (BaZi) with physiological data.
 
-const ANALYSIS_PROMPT_EN = `### Role: AnatomySelf Digital Alchemist
-You master traditional Zi-Ping BaZi and modern functional medicine. Perform an "energy audit" of this chart.
+### Knowledge Framework:
+1. Parse Four Pillars — Heavenly Stems and Earthly Branches, their elements and interactions
+2. Analyze Stem interactions (生克) and Branch reactions (刑冲破害合会)
+3. Assess Day Master strength via 旺相休囚死 and 十二长生
+4. Identify pattern (格局), climate needs (调候), bridging elements (通关)
+5. Use Shen-Sha stars (羊刃/血支/白虎 etc.) as physiological risk signals
 
-WRITE A DETAILED FREE-TEXT ANALYSIS covering these sections. Each section must be substantial (3-5 sentences).
+### Collision Logic:
+Map Five Elements → Organs: Wood(肝胆), Fire(心血管), Earth(脾胃), Metal(呼吸), Water(肾内分泌)
+When biomarker anomalies exist, find corresponding energetic conflicts.
 
-## 1. FOUR PILLARS & PATTERN
-Describe the four pillars, Day Master strength, useful/harmful gods, and overall pattern.
+### Output Rules:
+- LANGUAGE: English only. Chinese only for organ_wuxing (木火土金水) and BaZi terms in parentheses.
+- Each current_forces: 3-5 sentences analyzing elemental dynamics → organ impact → symptoms.
+- Each prevention: specific daily action with duration/frequency.
+- temporal_outlook: 4-5 sentences covering next 12 months.
+- Tone: Mystical, precise, data-backed oracle. No empty platitudes.
+- Return ONLY valid JSON. No markdown wrapping.`;
 
-## 2. WOOD / LIVER SYSTEM (木)
-Current forces: what percentage, why, how it affects liver/gallbladder. Risk window and prevention.
+const SYSTEM_ZH = `### 角色：AnatomySelf 数字炼金术师（命理脑）
+你是一位精通子平八字与现代功能医学的"数字炼金术师"。通过将"时空坐标（八字）"与"生理坐标（体检数据）"对撞，执行"能量审计"。
 
-## 3. FIRE / CARDIOVASCULAR SYSTEM (火)
-Current forces: what percentage, why, how it affects heart. Risk window and prevention.
+### 知识框架：
+1. 解析四柱天干地支及其五行属性与相互作用
+2. 分析天干生克与地支刑冲破害合会
+3. 通过旺相休囚死与十二长生判断日主强弱
+4. 识别格局、调候需求、通关五行
+5. 引入神煞（羊刃/血支/白虎等）作为生理风险信号
 
-## 4. EARTH / DIGESTIVE SYSTEM (土)
-Current forces: what percentage, why, how it affects spleen/stomach. Risk window and prevention.
+### 对撞逻辑：
+五行→脏腑映射：木(肝胆)、火(心血管)、土(脾胃)、金(呼吸)、水(肾内分泌)
+当存在指标异常时，搜索命局中对应的能量冲突。
 
-## 5. METAL / RESPIRATORY SYSTEM (金)
-Current forces: what percentage, why, how it affects lungs. Risk window and prevention.
-
-## 6. WATER / KIDNEY SYSTEM (水)
-Current forces: what percentage, why, how it affects kidneys. Risk window and prevention.
-
-## 7. TEMPORAL OUTLOOK
-Next 12 months outlook (4-5 sentences) and 3 key dates.
-
-TONE: Mystical, precise, data-backed. Like an oracle reading ancient instruments. No empty platitudes.
-LANGUAGE: English only. Use Chinese only for BaZi terms in parentheses.`;
-
-const ANALYSIS_PROMPT_ZH = `### 角色：AnatomySelf 数字炼金术师
-你精通子平八字与功能医学。执行这个命盘的"能量审计"。
-
-请写一份详细的自由文本分析，覆盖以下章节。每个章节必须有实质内容（3-5句话）。
-
-## 1. 四柱与格局
-描述四柱、日主强弱、用神忌神、整体格局。
-
-## 2. 木·肝胆系统
-当前态势：占比多少，为什么，如何影响肝胆。风险窗口和预防行动。
-
-## 3. 火·心血管系统
-当前态势：占比多少，为什么，如何影响心脏。风险窗口和预防行动。
-
-## 4. 土·脾胃代谢
-当前态势：占比多少，为什么，如何影响脾胃。风险窗口和预防行动。
-
-## 5. 金·呼吸系统
-当前态势：占比多少，为什么，如何影响肺。风险窗口和预防行动。
-
-## 6. 水·肾脏内分泌
-当前态势：占比多少，为什么，如何影响肾脏。风险窗口和预防行动。
-
-## 7. 时间展望
-未来12个月展望（4-5句话）和3个关键日期。
-
-语调：神秘、精准、数据驱动。如同神谕解读古代仪器。严禁空洞吉祥话。
-语言：全部中文。`;
-
-const CONVERT_PROMPT_EN = `Convert the above analysis into this exact JSON structure. Copy the analysis text faithfully into the corresponding fields — do NOT shorten or summarize. Return ONLY valid JSON:
-{"bazi_analysis":{"pillars":"[copy from section 1]","pattern":"[copy from section 1]","health_map":"[copy from section 1]"},"collision_items":[{"organ_wuxing":"木","current_forces":"[copy full text from section 2 forces]","risk_window":"YYYY/M-M","prevention":"[copy prevention from section 2]"},{"organ_wuxing":"火","current_forces":"[copy from section 3]","risk_window":"","prevention":"[copy]"},{"organ_wuxing":"土","current_forces":"[copy from section 4]","risk_window":"","prevention":"[copy]"},{"organ_wuxing":"金","current_forces":"[copy from section 5]","risk_window":"","prevention":"[copy]"},{"organ_wuxing":"水","current_forces":"[copy from section 6]","risk_window":"","prevention":"[copy]"}],"temporal_outlook":"[copy full text from section 7]","key_dates":["YYYY/M: reason","YYYY/M: reason","YYYY/M: reason"]}`;
-
-const CONVERT_PROMPT_ZH = `将上面的分析转换为以下JSON结构。忠实复制分析文本到对应字段——不要缩短或概括。只返回有效JSON：
-{"bazi_analysis":{"pillars":"[复制章节1]","pattern":"[复制章节1]","health_map":"[复制章节1]"},"collision_items":[{"organ_wuxing":"木","current_forces":"[复制章节2的完整态势分析]","risk_window":"YYYY年X-X月","prevention":"[复制章节2的预防]"},{"organ_wuxing":"火","current_forces":"[复制章节3]","risk_window":"","prevention":"[复制]"},{"organ_wuxing":"土","current_forces":"[复制章节4]","risk_window":"","prevention":"[复制]"},{"organ_wuxing":"金","current_forces":"[复制章节5]","risk_window":"","prevention":"[复制]"},{"organ_wuxing":"水","current_forces":"[复制章节6]","risk_window":"","prevention":"[复制]"}],"temporal_outlook":"[复制章节7完整文本]","key_dates":["YYYY年X月：原因","YYYY年X月：原因","YYYY年X月：原因"]}`;
+### 输出规则：
+- 语言：全部中文。
+- 每个current_forces：3-5句话，分析元素动态→脏腑影响→症状表现。
+- 每个prevention：具体日常行动（含时长/频率）。
+- temporal_outlook：4-5句话覆盖未来12个月。
+- 语调：神秘、精准、数据驱动的神谕。严禁空洞吉祥话。
+- 只返回有效JSON。不要用markdown包裹。`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -116,39 +76,68 @@ export default async function handler(req, res) {
     const astro = chartData?.astronomicalNote || '';
     const health = chartData?.healthFindings || '';
 
-    const chartStr = `BaZi: ${baziStr} | ${Y}/${M}\nChart: ${JSON.stringify(chartData)}${astro ? '\nNote: '+astro : ''}${health ? '\nHealth: '+health : ''}`;
+    const userMsg = isEn
+? `CHART (do not recalculate): ${JSON.stringify(chartData)}
+BaZi: ${baziStr} | NOW: ${Y}/${M}
+${astro ? 'Note: '+astro : ''}${health ? '\nHealth: '+health : ''}
 
-    // ═══ STEP 1: Free-text analysis (model writes naturally, no JSON constraint) ═══
-    console.log('[destiny] Step 1: Free-text analysis...');
-    const analysis = await callZhipu(KEY, [
-      { role: 'system', content: isEn ? ANALYSIS_PROMPT_EN : ANALYSIS_PROMPT_ZH },
-      { role: 'user', content: chartStr }
-    ], 3000, 0.4);
+Think deeply about the elemental dynamics, then return this JSON:
+{"bazi_analysis":{"pillars":"describe all 4 pillars and elements","pattern":"day master strength + useful/harmful gods","health_map":"organ strengths/weaknesses"},"collision_items":[{"organ_wuxing":"木","current_forces":"3-5 sentences on Wood/Liver","risk_window":"${Y}/M-M","prevention":"specific action"},{"organ_wuxing":"火","current_forces":"3-5 sentences on Fire/Heart","risk_window":"","prevention":"action"},{"organ_wuxing":"土","current_forces":"3-5 sentences on Earth/Spleen","risk_window":"","prevention":"action"},{"organ_wuxing":"金","current_forces":"3-5 sentences on Metal/Lung","risk_window":"","prevention":"action"},{"organ_wuxing":"水","current_forces":"3-5 sentences on Water/Kidney","risk_window":"","prevention":"action"}],"temporal_outlook":"4-5 sentences on next 12 months","key_dates":["${Y}/M: reason","${Y}/M: reason","${Y}/M: reason"]}`
+: `排盘数据（严禁重算）：${JSON.stringify(chartData)}
+八字：${baziStr} | 当前：${Y}年${M}月
+${astro ? '备注：'+astro : ''}${health ? '\n健康：'+health : ''}
 
-    if (!analysis) {
-      console.log('[destiny] Step 1 FAILED — no analysis text returned');
-      return res.status(500).json({ error: 'Meta Brain analysis failed — no response from AI. Please retry.' });
+请深度思考五行动态关系，然后返回以下JSON：
+{"bazi_analysis":{"pillars":"四柱及五行描述","pattern":"日主强弱+用神忌神","health_map":"脏腑强弱"},"collision_items":[{"organ_wuxing":"木","current_forces":"3-5句分析木/肝胆","risk_window":"${Y}年X-X月","prevention":"具体行动"},{"organ_wuxing":"火","current_forces":"3-5句分析火/心血管","risk_window":"","prevention":"行动"},{"organ_wuxing":"土","current_forces":"3-5句分析土/脾胃","risk_window":"","prevention":"行动"},{"organ_wuxing":"金","current_forces":"3-5句分析金/呼吸","risk_window":"","prevention":"行动"},{"organ_wuxing":"水","current_forces":"3-5句分析水/肾脏","risk_window":"","prevention":"行动"}],"temporal_outlook":"4-5句话覆盖未来12个月","key_dates":["${Y}年X月：原因","${Y}年X月：原因","${Y}年X月：原因"]}`;
+
+    // ═══ GLM-5 with Deep Thinking enabled ═══
+    console.log('[destiny] Calling GLM-5 with thinking enabled...');
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 60000); // 60s for deep thinking
+    
+    const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
+      body: JSON.stringify({
+        model: 'glm-5',
+        max_tokens: 16000,
+        temperature: 1.0, // Required for thinking mode
+        thinking: { type: 'enabled' },
+        messages: [
+          { role: 'system', content: isEn ? SYSTEM_EN : SYSTEM_ZH },
+          { role: 'user', content: userMsg }
+        ],
+      }),
+    });
+    clearTimeout(t);
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error('[destiny] GLM-5 error:', resp.status, err.substring(0, 300));
+      return res.status(500).json({ error: `GLM-5 error (${resp.status}): ${err.substring(0, 200)}` });
     }
-    console.log('[destiny] Step 1 OK, length:', analysis.length, 'preview:', analysis.substring(0, 100));
 
-    // ═══ STEP 2: Convert to JSON (model copies its own text into structure) ═══
-    console.log('[destiny] Step 2: Converting to JSON...');
-    const jsonTxt = await callZhipu(KEY, [
-      { role: 'system', content: isEn ? 'Convert the analysis into JSON. Copy text faithfully. Return ONLY valid JSON.' : '将分析转换为JSON。忠实复制文本。只返回有效JSON。' },
-      { role: 'user', content: analysis + '\n\n' + (isEn ? CONVERT_PROMPT_EN : CONVERT_PROMPT_ZH) }
-    ], 4000, 0.1);
+    const data = await resp.json();
+    const choice = data.choices?.[0]?.message || {};
+    const thinking = choice.reasoning_content || '';
+    const content = choice.content || '';
+    
+    console.log('[destiny] thinking length:', thinking.length, 'content length:', content.length);
 
-    if (!jsonTxt) {
-      // Fallback: return raw analysis as temporal_outlook
-      return res.json({ collision_items: [], temporal_outlook: analysis.substring(0, 1000), bazi_analysis: null });
-    }
-
-    const parsed = parseJson(jsonTxt);
+    const parsed = parseJson(content);
     if (parsed) {
-      console.log('[destiny] Success! Items:', parsed.collision_items?.length, 'forces:', parsed.collision_items?.map(i => (i.current_forces||'').length));
+      // Attach thinking process for frontend display if desired
+      parsed._thinking = thinking.substring(0, 2000);
+      console.log('[destiny] Success! Items:', parsed.collision_items?.length);
     } else {
-      console.log('[destiny] JSON parse failed, returning raw analysis');
-      return res.json({ collision_items: [], temporal_outlook: analysis.substring(0, 1000), bazi_analysis: null });
+      console.log('[destiny] JSON parse failed. Content first 300:', content.substring(0, 300));
+      // Try parsing from thinking if content failed
+      const fromThinking = parseJson(thinking);
+      if (fromThinking) {
+        fromThinking._thinking = thinking.substring(0, 2000);
+        return res.json(fromThinking);
+      }
+      return res.json({ collision_items: [], temporal_outlook: content.substring(0, 1000) || thinking.substring(0, 1000), _thinking: thinking.substring(0, 2000) });
     }
 
     res.json(parsed);

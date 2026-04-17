@@ -86,16 +86,20 @@ You are the Science Brain of AnatomySelf, a clinical health intelligence that in
       { role: 'user', content: `【${isEn ? 'Analysis Context' : '分析上下文'}】\n${ctxStr}\n\n【${isEn ? 'User Question' : '用户提问'}】\n${question}` }
     ];
 
-    // ═══ Primary: Zhipu GLM-4-Plus ═══
+    // ═══ Primary: Zhipu — GLM-5 (thinking) for Meta, GLM-4-Plus for Science ═══
     let answer = '';
     if (ZHIPU_KEY) {
       try {
+        const isMetaBrain = brain === 'destiny';
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 20000);
+        const t = setTimeout(() => ctrl.abort(), isMetaBrain ? 45000 : 20000);
+        const bodyPayload = isMetaBrain
+          ? { model: 'glm-5', max_tokens: 8000, temperature: 1.0, thinking: { type: 'enabled' }, messages }
+          : { model: 'glm-4-plus', max_tokens: 2000, temperature: 0.35, messages };
         const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
           method: 'POST', signal: ctrl.signal,
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ZHIPU_KEY}` },
-          body: JSON.stringify({ model: 'glm-4-plus', max_tokens: 2000, temperature: 0.35, messages }),
+          body: JSON.stringify(bodyPayload),
         });
         clearTimeout(t);
         if (resp.ok) {

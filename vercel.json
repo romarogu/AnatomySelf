@@ -10,13 +10,13 @@
       "maxDuration": 120
     },
     "api/destiny.js": {
-      "maxDuration": 120
+      "maxDuration": 300
     },
     "api/health.js": {
       "maxDuration": 10
     },
     "api/chat.js": {
-      "maxDuration": 120
+      "maxDuration": 300
     },
     "api/user-data.js": {
       "maxDuration": 10
