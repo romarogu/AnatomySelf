@@ -524,6 +524,12 @@ const sL_EN = {alert:"Focus",caution:"Watch",optimal:"Balanced"};
 // ════════════════════════════════════════
 // DEMO DATA — 15 标准化槽位
 // ════════════════════════════════════════
+// ═══ Suggested Question Banks ═══
+const META_Q_EN = ["Which organ should I watch most this year?","What type of exercise suits my constitution?","What foods best balance my Five Elements?","Is my sleep quality connected to my chart?","Which season am I most vulnerable health-wise?","Are my mood swings related to my elements?","Does my chart favor an early riser or night owl?","Does my chart show signs of longevity?","How does my career energy look this year?","Am I better suited for solo ventures or partnerships?","Any financial shifts in the second half of this year?","What industries align best with my chart?","Do I have benefactor energy this year?","When is a good time for major financial decisions?","Is my windfall luck or steady income luck stronger?","What does my marriage palace reveal?","How is my relationship energy this year?","Which element types am I most compatible with?","How strong is my romance energy?","How do my elements interact with my children's?","What is my Day Master's core personality?","Where does my greatest natural talent lie?","Where am I most likely to overextend myself?","How does my chart reflect stress resilience?","Am I better as a leader or behind the scenes?","What are the key months to watch this year?","How is my current Luck Pillar affecting me?","Will next year's energy favor or challenge me?","Can you explain my Four Pillars to me?","What is a Useful God and what is mine?"];
+const META_Q_ZH = ["我今年最该注意哪个器官？","我的体质适合什么运动方式？","从五行看，我应该多吃什么来调理？","我的睡眠问题跟命盘有关系吗？","什么季节我最容易生病？","我的情绪波动跟五行有关系吗？","我适合早起还是晚睡的作息？","我的命盘有没有长寿的迹象？","今年我的事业方向怎么看？","我适合独立创业还是跟人合作？","下半年有没有财运上的变化？","我的命盘最适合什么行业？","今年有贵人运吗？","我什么时候适合做重大投资决定？","我的偏财运和正财运哪个更强？","我的婚姻宫透露了什么？","今年的感情运势如何？","我跟什么五行属性的人最合？","我的桃花运旺不旺？","我跟孩子的五行关系怎么样？","我日主的核心性格是什么？","我命局中最强的天赋在哪？","我容易在什么方面过度消耗？","我的抗压能力从命盘怎么看？","我适合当领导还是做幕后？","今年有哪些关键月份要留意？","我目前的大运对我影响是什么？","明年的流年对我是利好还是挑战？","能帮我解释一下我的四柱吗？","什么是用神？我的用神是什么？"];
+const SCI_Q_EN = ["Which of my biomarkers are outside normal range?","What do my liver function markers indicate?","Is my blood pressure level a concern?","What does my uric acid level mean?","Are my blood sugar and HbA1c normal?","Should I be concerned about my cholesterol?","How should I interpret my kidney function data?","Is my Vitamin D level sufficient?","Based on my data, what is my biggest health risk?","Do I show signs of metabolic syndrome?","Is my cardiovascular risk elevated?","Should I be worried about diabetes risk?","Do my markers suggest fatty liver tendencies?","Are these markers normal for my age?","How should I adjust my diet based on my markers?","What foods should I avoid?","What foods can help reduce uric acid?","Which nutrients should I increase?","How does alcohol affect my markers?","What exercise is best for me based on my data?","Can my markers support high-intensity exercise?","Which markers are most affected by sitting?","How often should I recheck these markers?","Which markers are most affected by stress?","Can you do a deep dive on my liver health?","Give me a cardiovascular system overview?","How is my kidney and urinary system doing?","How is my overall metabolic function?","Which markers might worsen in 6 months without action?","Which marker should I prioritize improving?"];
+const SCI_Q_ZH = ["我目前哪些指标偏离正常范围？","我的肝功能指标说明什么？","我的血压水平有风险吗？","我的尿酸值意味着什么？","我的血糖和糖化血红蛋白正常吗？","我的胆固醇水平需要注意吗？","我的肾功能数据怎么解读？","我的维生素D水平够吗？","根据我的数据，最大的健康风险是什么？","我有代谢综合征的迹象吗？","我的心血管风险高吗？","我需要担心糖尿病风险吗？","我的指标有脂肪肝的倾向吗？","按我的年龄，这些指标算正常吗？","根据我的指标，该怎么调整饮食？","我应该避免哪些食物？","有什么食物能帮助降低尿酸？","我应该增加哪些营养素的摄入？","喝酒对我的指标有影响吗？","根据我的数据，什么运动最适合我？","我的指标允许高强度运动吗？","久坐对我的哪些指标影响最大？","我应该多久复查一次这些指标？","压力大会影响我的哪些指标？","能详细分析一下我的肝脏健康吗？","帮我综合评估一下心血管系统？","我的肾脏和泌尿系统状况如何？","我的代谢功能整体怎么样？","如果不干预，半年后哪些指标可能恶化？","我最应该优先改善哪个指标？"];
+
 const INIT_M = [
   {key:"ALT",value:null},{key:"AST",value:null},{key:"TBIL",value:null},
   {key:"SBP",value:null},{key:"DBP",value:null},{key:"RHR",value:null},
@@ -950,12 +956,12 @@ function Dashboard({ user, setUser, onLogout }) {
     });
   }, []);
   const [metrics, setMetrics] = useState(initMetrics);
-  const [metricsLoaded, setMetricsLoaded] = useState(false);
+  const [metricsLoaded, setMetricsLoaded] = useState(!user.userId); // If not logged in, immediately available
 
-  // Load metrics from Supabase on mount (with 3s timeout guarantee)
+  // Load metrics from Supabase on mount (fast timeout)
   useEffect(() => {
     if (!user.userId) { setMetricsLoaded(true); return; }
-    const timeout = setTimeout(() => setMetricsLoaded(true), 3000); // Guarantee unlock after 3s
+    const timeout = setTimeout(() => setMetricsLoaded(true), 500); // Unlock after 500ms max
     (async () => {
       try {
         const cloudMetrics = await apiLoadMetrics(user.userId);
@@ -1003,6 +1009,17 @@ function Dashboard({ user, setUser, onLogout }) {
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [suggestedQs, setSuggestedQs] = useState([]);
+  // Refresh suggested questions on brain switch, chat send, or mount
+  const refreshSuggestions = useCallback((brain) => {
+    const b = brain || chatBrain;
+    const pool = b === "science" ? (locale==='en' ? SCI_Q_EN : SCI_Q_ZH) : (locale==='en' ? META_Q_EN : META_Q_ZH);
+    // Fisher-Yates shuffle for true randomness
+    const arr = [...pool];
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    setSuggestedQs(arr.slice(0, 3));
+  }, [chatBrain, locale]);
+  useEffect(() => { refreshSuggestions(chatBrain); }, [chatBrain, locale]); // eslint-disable-line
   // Radar interaction state
   const [selectedDim, setSelectedDim] = useState(null);
   const [timeOffset, setTimeOffset] = useState(0);
@@ -2425,94 +2442,19 @@ ${days.map(d=>`<div class="day">
               </div>
 
               {/* Recommended questions */}
-              {(() => {
-                const META_Q = locale==='en' ? [
-                  "Which organ should I watch most this year?","What type of exercise suits my constitution?",
-                  "What foods best balance my Five Elements?","Is my sleep quality connected to my chart?",
-                  "Which season am I most vulnerable health-wise?","Are my mood swings related to my elements?",
-                  "Does my chart favor an early riser or night owl?","Does my chart show signs of longevity?",
-                  "How does my career energy look this year?","Am I better suited for solo ventures or partnerships?",
-                  "Any financial shifts in the second half of this year?","What industries align best with my chart?",
-                  "Do I have benefactor energy this year?","When is a good time for major financial decisions?",
-                  "Is my windfall luck or steady income luck stronger?","What does my marriage palace reveal?",
-                  "How is my relationship energy this year?","Which element types am I most compatible with?",
-                  "How strong is my romance energy?","How do my elements interact with my children's?",
-                  "What is my Day Master's core personality?","Where does my greatest natural talent lie?",
-                  "Where am I most likely to overextend myself?","How does my chart reflect stress resilience?",
-                  "Am I better as a leader or behind the scenes?","What are the key months to watch this year?",
-                  "How is my current Luck Pillar affecting me?","Will next year's energy favor or challenge me?",
-                  "Can you explain my Four Pillars to me?","What is a Useful God and what is mine?",
-                ] : [
-                  "我今年最该注意哪个器官？","我的体质适合什么运动方式？",
-                  "从五行看，我应该多吃什么来调理？","我的睡眠问题跟命盘有关系吗？",
-                  "什么季节我最容易生病？","我的情绪波动跟五行有关系吗？",
-                  "我适合早起还是晚睡的作息？","我的命盘有没有长寿的迹象？",
-                  "今年我的事业方向怎么看？","我适合独立创业还是跟人合作？",
-                  "下半年有没有财运上的变化？","我的命盘最适合什么行业？",
-                  "今年有贵人运吗？","我什么时候适合做重大投资决定？",
-                  "我的偏财运和正财运哪个更强？","我的婚姻宫透露了什么？",
-                  "今年的感情运势如何？","我跟什么五行属性的人最合？",
-                  "我的桃花运旺不旺？","我跟孩子的五行关系怎么样？",
-                  "我日主的核心性格是什么？","我命局中最强的天赋在哪？",
-                  "我容易在什么方面过度消耗？","我的抗压能力从命盘怎么看？",
-                  "我适合当领导还是做幕后？","今年有哪些关键月份要留意？",
-                  "我目前的大运对我影响是什么？","明年的流年对我是利好还是挑战？",
-                  "能帮我解释一下我的四柱吗？","什么是用神？我的用神是什么？",
-                ];
-                const SCI_Q = locale==='en' ? [
-                  "Which of my biomarkers are outside normal range?","What do my liver function markers indicate?",
-                  "Is my blood pressure level a concern?","What does my uric acid level mean?",
-                  "Are my blood sugar and HbA1c normal?","Should I be concerned about my cholesterol?",
-                  "How should I interpret my kidney function data?","Is my Vitamin D level sufficient?",
-                  "Based on my data, what is my biggest health risk?","Do I show signs of metabolic syndrome?",
-                  "Is my cardiovascular risk elevated?","Should I be worried about diabetes risk?",
-                  "Do my markers suggest fatty liver tendencies?","Are these markers normal for my age?",
-                  "How should I adjust my diet based on my markers?","What foods should I avoid?",
-                  "What foods can help reduce uric acid?","Which nutrients should I increase?",
-                  "How does alcohol affect my markers?","What exercise is best for me based on my data?",
-                  "Can my markers support high-intensity exercise?","Which markers are most affected by sitting?",
-                  "How often should I recheck these markers?","Which markers are most affected by stress?",
-                  "Can you do a deep dive on my liver health?","Give me a cardiovascular system overview?",
-                  "How is my kidney and urinary system doing?","How is my overall metabolic function?",
-                  "Which markers might worsen in 6 months without action?","Which marker should I prioritize improving?",
-                ] : [
-                  "我目前哪些指标偏离正常范围？","我的肝功能指标说明什么？",
-                  "我的血压水平有风险吗？","我的尿酸值意味着什么？",
-                  "我的血糖和糖化血红蛋白正常吗？","我的胆固醇水平需要注意吗？",
-                  "我的肾功能数据怎么解读？","我的维生素D水平够吗？",
-                  "根据我的数据，最大的健康风险是什么？","我有代谢综合征的迹象吗？",
-                  "我的心血管风险高吗？","我需要担心糖尿病风险吗？",
-                  "我的指标有脂肪肝的倾向吗？","按我的年龄，这些指标算正常吗？",
-                  "根据我的指标，该怎么调整饮食？","我应该避免哪些食物？",
-                  "有什么食物能帮助降低尿酸？","我应该增加哪些营养素的摄入？",
-                  "喝酒对我的指标有影响吗？","根据我的数据，什么运动最适合我？",
-                  "我的指标允许高强度运动吗？","久坐对我的哪些指标影响最大？",
-                  "我应该多久复查一次这些指标？","压力大会影响我的哪些指标？",
-                  "能详细分析一下我的肝脏健康吗？","帮我综合评估一下心血管系统？",
-                  "我的肾脏和泌尿系统状况如何？","我的代谢功能整体怎么样？",
-                  "如果不干预，半年后哪些指标可能恶化？","我最应该优先改善哪个指标？",
-                ];
-                const pool = chatBrain === "science" ? SCI_Q : META_Q;
-                // True random picks each render
-                const shuffled = [...pool].sort(() => Math.random() - 0.5);
-                const unique = shuffled.slice(0, 3);
-
-                return (
-                  <div style={{ display:"flex", gap:6, padding:"8px 0", flexWrap:"wrap" }}>
-                    {unique.map((q, i) => (
-                      <button key={i} onClick={() => sendChat(q)}
-                        style={{
-                          padding:"6px 12px", fontSize:".78rem", color: chatBrain==="science" ? "#52b09a" : "#c4a265",
-                          background: chatBrain==="science" ? "rgba(82,176,154,.06)" : "rgba(196,162,101,.06)",
-                          border:`1px solid ${chatBrain==="science" ? "rgba(82,176,154,.15)" : "rgba(196,162,101,.15)"}`,
-                          cursor:"pointer", fontFamily:"'Noto Serif SC',serif", lineHeight:1.4, textAlign:"left",
-                          borderRadius:2, maxWidth:"48%",
-                        }}
-                      >💬 {q}</button>
-                    ))}
-                  </div>
-                );
-              })()}
+              <div style={{ display:"flex", gap:6, padding:"8px 0", flexWrap:"wrap" }}>
+                {suggestedQs.map((q, i) => (
+                  <button key={q} onClick={() => { sendChat(q); setTimeout(() => refreshSuggestions(), 100); }}
+                    style={{
+                      padding:"6px 12px", fontSize:".78rem", color: chatBrain==="science" ? "#52b09a" : "#c4a265",
+                      background: chatBrain==="science" ? "rgba(82,176,154,.06)" : "rgba(196,162,101,.06)",
+                      border:`1px solid ${chatBrain==="science" ? "rgba(82,176,154,.15)" : "rgba(196,162,101,.15)"}`,
+                      cursor:"pointer", fontFamily:"'Noto Serif SC',serif", lineHeight:1.4, textAlign:"left",
+                      borderRadius:2, maxWidth:"48%",
+                    }}
+                  >💬 {q}</button>
+                ))}
+              </div>
 
               {/* Input */}
               <div style={{ display:"flex", gap:8, padding:"8px 0 0", borderTop:"1px solid rgba(196,162,101,.08)" }}>
