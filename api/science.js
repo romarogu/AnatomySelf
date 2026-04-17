@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
-        resp = await fetch('https://api.z.ai/v1/chat/completions', {
+        resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
           method: 'POST',
           signal: controller.signal,
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ZHIPU_KEY}` },
