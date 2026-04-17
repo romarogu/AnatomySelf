@@ -2147,22 +2147,22 @@ ${days.map(d=>`<div class="day">
 
                           {/* Expand/Collapse toggle */}
                           {(sciItem || dstItem) && (
-                            <div
-                              onClick={(e) => { e.stopPropagation(); e.preventDefault(); setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] })); }}
-                              role="button" tabIndex={0}
-                              onKeyDown={(e) => { if (e.key==='Enter') setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] })); }}
+                            <button
+                              type="button"
+                              onClick={() => setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] }))}
                               style={{
-                                padding:"10px 16px", cursor:"pointer", userSelect:"none", WebkitTapHighlightColor:"transparent",
+                                width:"100%", padding:"10px 16px", cursor:"pointer", userSelect:"none",
                                 borderTop:"1px solid rgba(196,162,101,.12)",
+                                border:"none", borderTopStyle:"solid", borderTopWidth:1, borderTopColor:"rgba(196,162,101,.12)",
                                 display:"flex", alignItems:"center", gap:6,
                                 background: expandedCards[g.el] ? "rgba(196,162,101,.06)" : "rgba(196,162,101,.02)",
-                                transition:"background .15s",
+                                fontFamily:"'JetBrains Mono',monospace", textAlign:"left",
                               }}
                             >
                               <span style={{ fontSize:".75rem", color: expandedCards[g.el] ? "#c4a265" : "#9a9488", letterSpacing:".05em", fontWeight:500 }}>
                                 {expandedCards[g.el] ? '▾' : '▸'} {locale==='en' ? (expandedCards[g.el] ? 'Collapse' : 'Show Details') : (expandedCards[g.el] ? '收起' : '展开详情')}
                               </span>
-                            </div>
+                            </button>
                           )}
                         </div>
                       );

@@ -20,7 +20,7 @@ function parseJson(txt) {
 
 async function callZhipu(key, messages, maxTokens = 4000, temp = 0.3) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 35000);
+  const t = setTimeout(() => ctrl.abort(), 25000); // 25s per step
   try {
     const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
       method: 'POST', signal: ctrl.signal,
@@ -28,7 +28,11 @@ async function callZhipu(key, messages, maxTokens = 4000, temp = 0.3) {
       body: JSON.stringify({ model: 'glm-4-plus', max_tokens: maxTokens, temperature: temp, messages }),
     });
     clearTimeout(t);
-    if (!resp.ok) { console.log('[destiny] API status:', resp.status); return ''; }
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      console.log('[destiny] API status:', resp.status, errText.substring(0, 200));
+      return '';
+    }
     const data = await resp.json();
     return data.choices?.[0]?.message?.content || '';
   } catch (e) { clearTimeout(t); console.log('[destiny] API error:', e.message); return ''; }
@@ -121,8 +125,11 @@ export default async function handler(req, res) {
       { role: 'user', content: chartStr }
     ], 3000, 0.4);
 
-    if (!analysis) return res.status(500).json({ error: 'Meta Brain analysis failed — no response from AI' });
-    console.log('[destiny] Analysis length:', analysis.length);
+    if (!analysis) {
+      console.log('[destiny] Step 1 FAILED — no analysis text returned');
+      return res.status(500).json({ error: 'Meta Brain analysis failed — no response from AI. Please retry.' });
+    }
+    console.log('[destiny] Step 1 OK, length:', analysis.length, 'preview:', analysis.substring(0, 100));
 
     // ═══ STEP 2: Convert to JSON (model copies its own text into structure) ═══
     console.log('[destiny] Step 2: Converting to JSON...');
