@@ -497,7 +497,7 @@ function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, ti
               <span style={{ fontFamily: "'JetBrains Mono',monospace", color: sC[hoveredColl.lv] }}>{hoveredColl.corr}%</span>
             </div>
             <div style={{ textAlign: "center", marginTop: 4, fontSize: ".7rem", color: sC[hoveredColl.lv], fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".1em" }}>
-              {(locale==='en'?sL_EN:sL_ZH)[hoveredColl.lv]}
+              {(statusLabels||sL_ZH)[hoveredColl.lv]}
             </div>
           </>
         )}
@@ -1934,6 +1934,7 @@ ${days.map(d=>`<div class="day">
                     }
                     tooltipLabels={{ clinical:t('radar.clinicalScore'), energetic:t('radar.energeticScore'), divergence:t('radar.divergence'), resonance:t('radar.resonance') }}
                     discoveryMode={isDiscovery}
+                    statusLabels={locale==='en'?sL_EN:sL_ZH}
                   />
                   <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:10, fontSize:".78rem" }}>
                     <span style={{ color:"#c4a265" }}>{t('radar.destinyLayer')}</span>
