@@ -980,6 +980,7 @@ function Dashboard({ user, setUser, onLogout }) {
   const [sciL, setSciL] = useState(false);
   const [dst, setDst] = useState(null);
   const [dstL, setDstL] = useState(false);
+  const [expandedCards, setExpandedCards] = useState({});
   const [tab, setTab] = useState(isDiscovery ? "radar" : "upload");
   // Mobile detection via window width — more reliable than CSS media queries
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth <= 860);
@@ -2073,42 +2074,72 @@ ${days.map(d=>`<div class="day">
                           </div>
 
                           {/* Two-column: Science | Meta */}
-                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
-                            {/* Science Brain — Clinical Fact */}
-                            <div style={{ padding:"12px 16px", borderRight:"1px solid rgba(196,162,101,.06)" }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:8 }}>
-                                <div style={{ width:5, height:5, borderRadius:"50%", background:"#52b09a" }}/>
-                                <span style={{ ...S.mono, fontSize:".62rem", color:"#52b09a", letterSpacing:".1em" }}>CLINICAL</span>
-                              </div>
-                              {sciItem ? (
-                                <>
-                                  <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:6, fontWeight: isCritical ? 600 : 400 }}>
-                                    {sciItem.clinical_fact || sciItem.physiological_analysis || '—'}
-                                  </div>
-                                  <div style={{ fontSize:".88rem", color:"#52b09a", fontWeight:500, marginTop:6 }}>→ {sciItem.recommendation}</div>
-                                </>
-                              ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
-                            </div>
+                          {(() => {
+                            const isExpanded = expandedCards[g.el];
+                            // Summary: first sentence only
+                            const clinFull = sciItem?.clinical_fact || sciItem?.physiological_analysis || '';
+                            const clinSummary = clinFull.split(/[.。！!]/)[0] + (clinFull.includes('.') || clinFull.includes('。') ? '.' : '');
+                            const enerFull = dstItem?.current_forces || '';
+                            const enerSummary = enerFull.split(/[.。！!]/)[0] + (enerFull.includes('.') || enerFull.includes('。') ? '.' : '');
+                            const hasDetail = (clinFull.length > clinSummary.length) || (enerFull.length > enerSummary.length);
 
-                            {/* Meta Brain — Energetic Outlook */}
-                            <div style={{ padding:"12px 16px" }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:8 }}>
-                                <div style={{ width:5, height:5, borderRadius:"50%", background:"#c4a265" }}/>
-                                <span style={{ ...S.mono, fontSize:".62rem", color:"#c4a265", letterSpacing:".1em" }}>ENERGETIC</span>
-                              </div>
-                              {dstItem ? (
-                                <>
-                                  <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:4 }}>
-                                    {dstItem.current_forces}
+                            return (
+                              <>
+                                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
+                                  {/* Science Brain — Clinical */}
+                                  <div style={{ padding:"12px 16px", borderRight:"1px solid rgba(196,162,101,.06)" }}>
+                                    <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:8 }}>
+                                      <div style={{ width:5, height:5, borderRadius:"50%", background:"#52b09a" }}/>
+                                      <span style={{ ...S.mono, fontSize:".62rem", color:"#52b09a", letterSpacing:".1em" }}>CLINICAL</span>
+                                    </div>
+                                    {sciItem ? (
+                                      <>
+                                        <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:6, fontWeight: isCritical ? 600 : 400 }}>
+                                          {isExpanded ? clinFull : clinSummary}
+                                        </div>
+                                        <div style={{ fontSize:".88rem", color:"#52b09a", fontWeight:500, marginTop:6 }}>→ {sciItem.recommendation}</div>
+                                      </>
+                                    ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
                                   </div>
-                                  {dstItem.risk_window && (
-                                    <div style={{ fontSize:".75rem", color:"#d4a840", marginBottom:4 }}>⏱ {dstItem.risk_window}</div>
-                                  )}
-                                  <div style={{ fontSize:".88rem", color:"#c4a265", fontWeight:500, marginTop:6 }}>→ {dstItem.prevention}</div>
-                                </>
-                              ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
-                            </div>
-                          </div>
+
+                                  {/* Meta Brain — Energetic */}
+                                  <div style={{ padding:"12px 16px" }}>
+                                    <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:8 }}>
+                                      <div style={{ width:5, height:5, borderRadius:"50%", background:"#c4a265" }}/>
+                                      <span style={{ ...S.mono, fontSize:".62rem", color:"#c4a265", letterSpacing:".1em" }}>ENERGETIC</span>
+                                    </div>
+                                    {dstItem ? (
+                                      <>
+                                        <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:4 }}>
+                                          {isExpanded ? enerFull : enerSummary}
+                                        </div>
+                                        {isExpanded && dstItem.risk_window && (
+                                          <div style={{ fontSize:".75rem", color:"#d4a840", marginBottom:4 }}>⏱ {dstItem.risk_window}</div>
+                                        )}
+                                        <div style={{ fontSize:".88rem", color:"#c4a265", fontWeight:500, marginTop:6 }}>→ {dstItem.prevention}</div>
+                                      </>
+                                    ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
+                                  </div>
+                                </div>
+
+                                {/* Expand/Collapse toggle */}
+                                {hasDetail && (
+                                  <div
+                                    onClick={() => setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] }))}
+                                    style={{
+                                      padding:"6px 16px", cursor:"pointer", userSelect:"none",
+                                      borderTop:"1px solid rgba(196,162,101,.06)",
+                                      display:"flex", alignItems:"center", gap:6,
+                                    }}
+                                  >
+                                    <span style={{ ...S.mono, fontSize:".62rem", color:"#5e5a52", letterSpacing:".1em", transition:"all .2s" }}>
+                                      {isExpanded ? '▾' : '▸'} {locale==='en' ? (isExpanded ? 'COLLAPSE' : 'FULL ANALYSIS') : (isExpanded ? '收起' : '详细推导')}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       );
                     })}

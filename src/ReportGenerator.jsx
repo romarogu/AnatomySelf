@@ -225,49 +225,172 @@ export async function generateWeeklyGuidePDF(data, locale) {
   const { bazi, dy, ln, date, weekDays } = data;
   const isEn = locale === 'en';
 
+  // ═══ Archetypal Ten-God Names ═══
+  const ARCHETYPE = {
+    Resource:  { en:'The Well',    zh:'源泉', icon:'◇', desc_en:'Nourishment flows inward', desc_zh:'滋养内聚' },
+    Companion: { en:'The Mirror',  zh:'镜像', icon:'◈', desc_en:'Strength meets its equal', desc_zh:'同气相求' },
+    Output:    { en:'The Forge',   zh:'熔炉', icon:'△', desc_en:'Creation demands release', desc_zh:'创造外泄' },
+    Wealth:    { en:'The Harvest', zh:'收获', icon:'▽', desc_en:'What you command, commands you', desc_zh:'所驭亦驭己' },
+    Power:     { en:'The Crown',   zh:'冠冕', icon:'☉', desc_en:'Structure tempers the soul', desc_zh:'秩序淬炼灵魂' },
+  };
+
+  // ═══ Stoic Daily Oracles — 5 types × 3 energy tiers ═══
+  const ORACLES = {
+    Resource: {
+      high: [isEn?'The well is full. Drink deeply and share.':'源泉充盈，饮之分之。', isEn?'Let wisdom enter without resistance.':'让智慧无阻而入。'],
+      mid:  [isEn?'Receive before you give. Fill the vessel first.':'先受后予，先满其器。', isEn?'Seek the teacher hidden in silence.':'在沉默中寻找老师。'],
+      low:  [isEn?'The roots are thirsty. Rest is not weakness.':'根已渴，休息非示弱。', isEn?'Guard your energy like a winter seed.':'如冬之种，守护能量。'],
+    },
+    Companion: {
+      high: [isEn?'Your reflection is sharp today. Move with confidence.':'今日映像清晰，自信前行。', isEn?'Allies appear when you stand firm.':'站稳时盟友自现。'],
+      mid:  [isEn?'Walk your own path. The mirror shows only you.':'走自己的路，镜中唯有你。', isEn?'Collaboration yes, compromise no.':'合作可，妥协否。'],
+      low:  [isEn?'Solitude sharpens what crowds dull.':'独处磨砺群聚所钝。', isEn?'Not every battle requires your presence.':'并非每场战役都需你在场。'],
+    },
+    Output: {
+      high: [isEn?'The forge is hot. Shape something that lasts.':'炉火正旺，锻造持久之物。', isEn?'Create boldly. Perfection is tomorrow\'s problem.':'大胆创造，完美是明天的事。'],
+      mid:  [isEn?'Express, but do not exhaust. Art has limits.':'表达，但不要耗尽。', isEn?'Channel fire into form, not sparks.':'将火铸成形，而非散作火花。'],
+      low:  [isEn?'Today is for depth, not speed.':'今日宜深不宜速。', isEn?'The forge cools. Observe before you strike.':'炉已冷，先观后锤。'],
+    },
+    Wealth: {
+      high: [isEn?'Harvest what you planted. The field is ready.':'收割所种，田已成熟。', isEn?'Opportunity favors the prepared hand.':'机会偏爱有准备的人。'],
+      mid:  [isEn?'Hold steady. Not every fruit is ripe.':'稳住，并非所有果实已熟。', isEn?'Manage what you have before seeking more.':'管好已有，再求更多。'],
+      low:  [isEn?'Release what no longer serves you.':'放下不再有用之物。', isEn?'Scarcity teaches the value of enough.':'匮乏教会你"足够"的价值。'],
+    },
+    Power: {
+      high: [isEn?'The crown is light today. Lead without force.':'今日冠冕轻，无力亦可领。', isEn?'Structure creates freedom. Build the frame.':'结构创造自由，搭好框架。'],
+      mid:  [isEn?'Discipline is the bridge between desire and result.':'自律是欲望与结果之间的桥。', isEn?'Bend, but do not break your principles.':'可弯，但不可折断原则。'],
+      low:  [isEn?'Pressure reveals what comfort hides.':'压力揭示舒适所隐藏的。', isEn?'The crown weighs heavy. Rest the neck.':'冠沉，歇颈。'],
+    },
+  };
+
+  const getOracle = (rel, energy) => {
+    const tier = energy >= 80 ? 'high' : energy >= 50 ? 'mid' : 'low';
+    const pool = ORACLES[rel]?.[tier] || [isEn?'Move with intention.':'有意而动。'];
+    // Deterministic pick based on day
+    return pool[Math.floor(energy * 7) % pool.length];
+  };
+
+  // ═══ Sacred Geometry Totems (larger, more detailed) ═══
+  const SIGIL = {
+    '木': `<svg viewBox="0 0 60 60" width="44" height="44" xmlns="http://www.w3.org/2000/svg">
+      <line x1="30" y1="8" x2="30" y2="52" stroke="#4a8a4a" stroke-width="1.2" opacity=".6"/>
+      <line x1="30" y1="16" x2="14" y2="28" stroke="#4a8a4a" stroke-width="1"/>
+      <line x1="30" y1="16" x2="46" y2="28" stroke="#4a8a4a" stroke-width="1"/>
+      <line x1="30" y1="28" x2="18" y2="38" stroke="#4a8a4a" stroke-width=".7"/>
+      <line x1="30" y1="28" x2="42" y2="38" stroke="#4a8a4a" stroke-width=".7"/>
+      <circle cx="30" cy="12" r="3" fill="none" stroke="#4a8a4a" stroke-width=".5" opacity=".4"/>
+      <circle cx="30" cy="30" r="12" fill="none" stroke="#4a8a4a" stroke-width=".3" opacity=".2"/>
+    </svg>`,
+    '火': `<svg viewBox="0 0 60 60" width="44" height="44" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="30,6 50,48 10,48" fill="none" stroke="#c45a30" stroke-width="1.2"/>
+      <polygon points="30,18 42,48 18,48" fill="none" stroke="#c45a30" stroke-width=".6" opacity=".4"/>
+      <circle cx="30" cy="34" r="6" fill="none" stroke="#c45a30" stroke-width=".5" opacity=".3"/>
+      <line x1="30" y1="6" x2="30" y2="28" stroke="#c45a30" stroke-width=".3" opacity=".3"/>
+    </svg>`,
+    '土': `<svg viewBox="0 0 60 60" width="44" height="44" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="10" width="40" height="40" fill="none" stroke="#a08a50" stroke-width="1.2"/>
+      <rect x="18" y="18" width="24" height="24" fill="none" stroke="#a08a50" stroke-width=".6" opacity=".4"/>
+      <line x1="10" y1="10" x2="50" y2="50" stroke="#a08a50" stroke-width=".3" opacity=".2"/>
+      <line x1="50" y1="10" x2="10" y2="50" stroke="#a08a50" stroke-width=".3" opacity=".2"/>
+      <circle cx="30" cy="30" r="4" fill="none" stroke="#a08a50" stroke-width=".5" opacity=".3"/>
+    </svg>`,
+    '金': `<svg viewBox="0 0 60 60" width="44" height="44" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="30" cy="30" r="20" fill="none" stroke="#9898a8" stroke-width="1.2"/>
+      <circle cx="30" cy="30" r="12" fill="none" stroke="#9898a8" stroke-width=".6" opacity=".4"/>
+      <circle cx="30" cy="30" r="4" fill="none" stroke="#9898a8" stroke-width=".4" opacity=".3"/>
+      <line x1="30" y1="10" x2="30" y2="50" stroke="#9898a8" stroke-width=".3" opacity=".25"/>
+      <line x1="10" y1="30" x2="50" y2="30" stroke="#9898a8" stroke-width=".3" opacity=".25"/>
+    </svg>`,
+    '水': `<svg viewBox="0 0 60 60" width="44" height="44" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="30,52 50,12 10,12" fill="none" stroke="#3a6a9a" stroke-width="1.2"/>
+      <polygon points="30,40 42,12 18,12" fill="none" stroke="#3a6a9a" stroke-width=".6" opacity=".4"/>
+      <circle cx="30" cy="26" r="6" fill="none" stroke="#3a6a9a" stroke-width=".5" opacity=".3"/>
+      <path d="M18,50 Q24,44 30,50 Q36,56 42,50" fill="none" stroke="#3a6a9a" stroke-width=".5" opacity=".3"/>
+    </svg>`,
+  };
+
   const c = document.createElement('div');
-  c.style.cssText = 'width:520px;background:#faf8f4;color:#1a1a18;font-family:"Noto Serif SC",serif;padding:44px 40px;font-size:14px;';
+  c.style.cssText = 'width:520px;color:#1a1a18;font-family:"Noto Serif SC","Cormorant Garamond",serif;padding:0;font-size:14px;position:relative;';
   document.body.appendChild(c);
 
   c.innerHTML = `
-    <div style="text-align:center;margin-bottom:24px;">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c4a265;letter-spacing:4px;">ANATOMYSELF</div>
-      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:#1a1a18;letter-spacing:3px;margin:6px 0;">${isEn?'WEEKLY ENERGY GUIDE':'一周能量防御指南'}</div>
-      <div style="font-size:11px;color:#888;">${date} · ${isEn?'Day Master':'日主'} ${bazi.dm}(${bazi.dme})</div>
-    </div>
+    <div style="position:relative;overflow:hidden;padding:40px 36px;background:#faf7f0;background-image:url('data:image/svg+xml,${encodeURIComponent(`<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence baseFrequency=".65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .92 0 0 0 0 .89 0 0 0 0 .84 0 0 0 .08 0"/></filter><rect width="200" height="200" filter="url(#n)"/></svg>`)}');">
 
-    <div style="height:3px;background:linear-gradient(90deg,#4a8a4a,#c45a30,#a08a50,#9898a8,#3a6a9a);margin-bottom:20px;border-radius:2px;"></div>
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:28px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#c4a265;letter-spacing:6px;margin-bottom:8px;">ANATOMYSELF</div>
+        <div style="font-size:11px;color:#b8963e;letter-spacing:10px;font-weight:300;margin-bottom:4px;">${isEn?'W E E K L Y   E N E R G Y':'一 周 能 量 指 引'}</div>
+        <div style="width:60px;height:1px;background:#c4a265;margin:10px auto;"></div>
+        <div style="font-size:10px;color:#999;letter-spacing:2px;">${date} · ${bazi.dm}(${bazi.dme})</div>
+      </div>
 
-    ${weekDays.map(d => {
-      const barColor = d.energy>=80?'#2a7a5a':d.energy>=60?'#b07a10':'#a02020';
-      const bgColor = d.energy>=80?'#f0f8f4':d.energy>=60?'#fdf8ee':'#fdf2f2';
-      return `
-      <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;margin-bottom:4px;background:${bgColor};border-left:3px solid ${EC[d.el]};">
-        <div style="width:52px;text-align:center;">
-          <div style="font-size:14px;color:#333;font-weight:500;">${d.date}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#888;">${isEn?d.weekdayEn:'周'+d.weekday}</div>
-        </div>
-        <div style="width:36px;text-align:center;">
-          ${TOTEM[d.el]||`<span style="font-size:18px;color:${EC[d.el]};">${d.el}</span>`}
-        </div>
-        <div style="flex:1;">
-          <div style="font-size:14px;color:#1a1a18;font-weight:500;">${d.gan}${d.zhi}</div>
-          <div style="font-size:10px;color:#888;">${d.rel}</div>
-        </div>
-        <div style="width:80px;">
-          <div style="height:6px;background:#eee;border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${d.energy}%;background:${barColor};border-radius:3px;"></div>
+      <!-- Five Element Bar -->
+      <div style="height:2px;background:linear-gradient(90deg,#4a8a4a,#c45a30,#a08a50,#9898a8,#3a6a9a);margin-bottom:24px;border-radius:1px;opacity:.6;"></div>
+
+      <!-- Day Cards -->
+      ${weekDays.map((d, idx) => {
+        const arch = ARCHETYPE[d.rel] || ARCHETYPE.Companion;
+        const oracle = getOracle(d.rel, d.energy);
+        const barColor = d.energy>=80?'#2a6a4a':d.energy>=60?'#b08a20':'#a03030';
+        const isToday = idx === 0;
+
+        return `
+        <div style="
+          margin-bottom:10px; padding:14px 16px;
+          background:${isToday ? 'rgba(196,162,101,.06)' : 'rgba(255,255,255,.3)'};
+          border:1px solid ${isToday ? 'rgba(196,162,101,.25)' : 'rgba(196,162,101,.08)'};
+          border-radius:2px; position:relative;
+        ">
+          ${isToday ? '<div style="position:absolute;top:6px;right:10px;font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#c4a265;letter-spacing:2px;opacity:.7;">TODAY</div>' : ''}
+          
+          <div style="display:flex;align-items:center;gap:14px;">
+            <!-- Date -->
+            <div style="width:44px;text-align:center;">
+              <div style="font-size:16px;color:#333;font-weight:500;line-height:1;">${d.date}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#999;margin-top:2px;">${isEn?d.weekdayEn:'周'+d.weekday}</div>
+            </div>
+
+            <!-- Sigil -->
+            <div style="width:48px;display:flex;justify-content:center;align-items:center;">
+              ${SIGIL[d.el]||`<span style="font-size:22px;color:${EC[d.el]};">${d.el}</span>`}
+            </div>
+
+            <!-- Pillar + Archetype -->
+            <div style="flex:1;">
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <span style="font-size:15px;color:#1a1a18;font-weight:500;">${d.gan}${d.zhi}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${EC[d.el]};letter-spacing:1px;">${isEn?arch.en:arch.zh}</span>
+              </div>
+              <div style="font-size:10px;color:#888;font-style:italic;margin-top:2px;">${isEn?arch.desc_en:arch.desc_zh}</div>
+            </div>
+
+            <!-- Energy Arc -->
+            <div style="width:55px;text-align:right;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:300;color:${barColor};line-height:1;">${d.energy}<span style="font-size:10px;">%</span></div>
+              <div style="height:3px;background:rgba(0,0,0,.06);border-radius:2px;margin-top:4px;overflow:hidden;">
+                <div style="height:100%;width:${d.energy}%;background:${barColor};border-radius:2px;"></div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div style="width:50px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:${barColor};">${d.energy}%</div>
-      </div>`;
-    }).join('')}
 
-    <div style="height:2px;background:linear-gradient(90deg,#c4a265,transparent);margin:24px 0 12px;"></div>
-    <div style="font-size:9px;color:#bbb;text-align:center;">
-      ${isEn?'Based on traditional BaZi analysis. Cultural reference only.':'基于传统命理推演，属文化参考。'}
+          <!-- Oracle -->
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(196,162,101,.08);">
+            <div style="font-size:11px;color:#6a5a35;font-style:italic;line-height:1.5;padding-left:58px;">
+              "${oracle}"
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+
+      <!-- Footer -->
+      <div style="margin-top:20px;text-align:center;">
+        <div style="width:40px;height:1px;background:#c4a265;margin:0 auto 10px;opacity:.4;"></div>
+        <div style="font-size:8px;color:#bbb;line-height:1.6;">
+          ${isEn?'Based on traditional BaZi Five Element analysis · Cultural reference only':'基于传统八字五行推演 · 仅供文化参考'}
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#ddd;margin-top:4px;letter-spacing:3px;">anatomyself.com</div>
+      </div>
     </div>
-    <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#ddd;margin-top:6px;">ANATOMYSELF · ${date}</div>
   `;
 
   await htmlToPDF(c, `AnatomySelf_WeeklyGuide_${date.replace(/[\.\/ ]/g,'')}.pdf`);
