@@ -1166,14 +1166,11 @@ function Dashboard({ user, setUser, onLogout }) {
         return { key: m.key, cn: ref.cn, value: m.value, unit: ref.u, low: ref.l, high: ref.h, status: inRange ? "正常" : (m.value > ref.h ? "偏高" : "偏低"), organ: ref.o };
       }).filter(Boolean);
 
-      if (anoms.length > 0) {
+      if (allData.length > 0) {
+        // Always send ALL metrics — science brain evaluates normal ones too
         const anomalyData = anoms.map(a => ({ key: a.key, cn: a.ref.cn, value: a.value, unit: a.ref.u, low: a.ref.l, high: a.ref.h, status: a.st }));
-        console.log('[doSci] sending anomalies:', anomalyData.length);
-        const res = await apiScience({ age, sex, anomalies: anomalyData, lang: locale });
-        setSci(res);
-      } else if (allData.length > 0) {
-        console.log('[doSci] sending allMetrics:', allData.length);
-        const res = await apiScience({ age, sex, anomalies: [], allMetrics: allData, lang: locale });
+        console.log('[doSci] sending allMetrics:', allData.length, 'anomalies:', anomalyData.length);
+        const res = await apiScience({ age, sex, anomalies: anomalyData, allMetrics: allData, lang: locale });
         setSci(res);
       } else {
         console.log('[doSci] NO metrics to send!');
