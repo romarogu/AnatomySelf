@@ -949,10 +949,11 @@ function Dashboard({ user, setUser, onLogout }) {
     });
   }, []);
   const [metrics, setMetrics] = useState(initMetrics);
+  const [metricsLoaded, setMetricsLoaded] = useState(false);
 
   // Load metrics from Supabase on mount
   useEffect(() => {
-    if (!user.userId) return;
+    if (!user.userId) { setMetricsLoaded(true); return; }
     (async () => {
       try {
         const cloudMetrics = await apiLoadMetrics(user.userId);
@@ -968,6 +969,7 @@ function Dashboard({ user, setUser, onLogout }) {
           });
         }
       } catch (e) { console.error('Load metrics error:', e); }
+      setMetricsLoaded(true);
     })();
   }, [user.userId]);
   const [file, setFile] = useState(null);
@@ -1213,10 +1215,10 @@ function Dashboard({ user, setUser, onLogout }) {
 
   // Discovery mode: auto-trigger destiny brain on mount (no science brain needed)
   useEffect(() => {
-    if (isDiscovery && !dst && !dstL && !sci) {
+    if (isDiscovery && metricsLoaded && !dst && !dstL && !sci) {
       doDst();
     }
-  }, [isDiscovery]); // eslint-disable-line -- only on mount
+  }, [isDiscovery, metricsLoaded]); // eslint-disable-line -- only on mount
 
   // ── CHAT FUNCTION ──
   const sendChat = useCallback(async () => {
@@ -1822,9 +1824,9 @@ ${days.map(d=>`<div class="day">
               </div>
 
               <div style={{ marginTop:16, display:"flex", gap:12, alignItems:"center" }}>
-                <button onClick={startAnalysisCeremony} disabled={sciL||dstL||analysisActive}
-                  style={{ ...S.btn, opacity:sciL||dstL||analysisActive?.5:1, cursor:sciL||dstL||analysisActive?"wait":"pointer" }}>
-                  {analysisActive?"⏳ "+t('upload.sciRunning'):"⚡ "+t('upload.launchBtn')}
+                <button onClick={startAnalysisCeremony} disabled={sciL||dstL||analysisActive||!metricsLoaded}
+                  style={{ ...S.btn, opacity:sciL||dstL||analysisActive||!metricsLoaded?.5:1, cursor:sciL||dstL||analysisActive||!metricsLoaded?"wait":"pointer" }}>
+                  {!metricsLoaded?"⏳ "+(locale==='en'?"Loading data...":"加载数据中..."):analysisActive?"⏳ "+t('upload.sciRunning'):"⚡ "+t('upload.launchBtn')}
                 </button>
                 <span style={{ fontSize:".85rem", color:"#5e5a52" }}>
                   {metrics.filter(m=>m.value!=null).length} {t('upload.itemsFilled')}
