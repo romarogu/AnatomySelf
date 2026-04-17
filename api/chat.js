@@ -13,7 +13,9 @@ export default async function handler(req, res) {
     if (!question) return res.status(400).json({ error: isEn ? 'Please enter a question' : '请输入问题' });
 
     const ctxStr = context || '';
-    const langNote = isEn ? ' Respond entirely in English. Use original Chinese terms in parentheses where relevant, e.g. "Wood Element (木)".' : '';
+    const langNote = isEn
+      ? ' You MUST respond ENTIRELY in English. Use Chinese terms only in parentheses, e.g. "Wood Element (木)". Never mix Chinese into main response.'
+      : ' 你必须全部用中文回答。专业术语可用英文缩写标注，如"谷丙转氨酶(ALT)"。';
 
     if (brain === 'destiny') {
       const KEY = process.env.DEEPSEEK_API_KEY;
@@ -27,7 +29,7 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
         body: JSON.stringify({
-          model: 'deepseek-chat', max_tokens: 2000, temperature: 0.4,
+          model: 'deepseek-chat', max_tokens: 2000, temperature: 0.2,
           messages: [
             { role: 'system', content: sysPrompt },
             { role: 'user', content: `【Analysis Context】\n${ctxStr}\n\n【User Question】\n${question}` }
@@ -57,7 +59,7 @@ export default async function handler(req, res) {
             method: 'POST', signal: controller.signal,
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ZHIPU_KEY}` },
             body: JSON.stringify({
-              model: 'glm-4-plus', max_tokens: 2000, temperature: 0.4,
+              model: 'glm-4-plus', max_tokens: 2000, temperature: 0.2,
               messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: userContent }],
             }),
           });

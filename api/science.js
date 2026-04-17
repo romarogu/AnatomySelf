@@ -28,8 +28,8 @@ export default async function handler(req, res) {
       : (age < 13 ? '儿童' : age < 18 ? '青少年' : age < 60 ? '成年人' : '老年人');
 
     const systemPrompt = isEn
-      ? 'Clinical medicine expert. Depth ≠ length. Use precise clinical terminology. Return pure JSON only, no markdown.'
-      : '临床医学专家。深度≠长度。使用精准临床术语。返回纯JSON，不要markdown。';
+      ? 'Clinical medicine expert. Respond ENTIRELY in English. Use precise clinical terminology. organ_system field must use Chinese characters (木/火/土/金/水). Be consistent — same input should produce similar analysis. Return pure JSON only.'
+      : '临床医学专家。全部用中文回答。使用精准临床术语。organ_system字段用中文字符（木/火/土/金/水）。保持一致性——相同输入应产生相似分析。返回纯JSON。';
 
     let prompt;
     if (anomalies && anomalies.length > 0) {
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
           signal: controller.signal,
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ZHIPU_KEY}` },
           body: JSON.stringify({
-            model: 'glm-4-plus', max_tokens: 2000, temperature: 0.3,
+            model: 'glm-4-plus', max_tokens: 2000, temperature: 0.15,
             messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
           }),
         });
