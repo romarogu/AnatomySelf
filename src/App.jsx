@@ -259,7 +259,7 @@ function calcColls(med,dest) {
 // ════════════════════════════════════════
 // D3 INTERACTIVE RADAR COMPONENT
 // ════════════════════════════════════════
-function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, timeOffset = 0, radarLabels, tooltipLabels, discoveryMode }) {
+function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, timeOffset = 0, radarLabels, tooltipLabels, discoveryMode, statusLabels }) {
   const svgRef = useRef(null);
   const tooltipRef = useRef(null);
   const [hoveredDim, setHoveredDim] = useState(null);
@@ -497,7 +497,7 @@ function InteractiveRadar({ med, dest, colls, onSelectDimension, selectedDim, ti
               <span style={{ fontFamily: "'JetBrains Mono',monospace", color: sC[hoveredColl.lv] }}>{hoveredColl.corr}%</span>
             </div>
             <div style={{ textAlign: "center", marginTop: 4, fontSize: ".7rem", color: sC[hoveredColl.lv], fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".1em" }}>
-              {sL[hoveredColl.lv]}
+              {(locale==='en'?sL_EN:sL_ZH)[hoveredColl.lv]}
             </div>
           </>
         )}
@@ -518,7 +518,8 @@ const S = {
   input: { width:"100%", background:"#16161c", border:"1px solid rgba(196,162,101,0.12)", color:"#f0ece4", padding:"10px 14px", fontFamily:"'JetBrains Mono',monospace", fontSize:"0.95rem", outline:"none", borderRadius:2 },
 };
 const sC = {alert:"#c44040",caution:"#d4a840",optimal:"#52b09a"};
-const sL = {alert:"重点关注",caution:"留意",optimal:"和谐"};
+const sL_ZH = {alert:"重点关注",caution:"留意",optimal:"和谐"};
+const sL_EN = {alert:"Focus",caution:"Watch",optimal:"Balanced"};
 
 // ════════════════════════════════════════
 // DEMO DATA — 15 标准化槽位
@@ -2011,34 +2012,13 @@ ${days.map(d=>`<div class="day">
                           <div style={{ width:40, height:4, background:"#08080a", borderRadius:1 }}>
                             <div style={{ height:"100%", width:Math.min(100, c.corr)+"%", background:sC[c.lv], borderRadius:1, transition:"width .4s" }}/>
                           </div>
-                          <span style={{ ...S.mono, fontSize:".72rem", color:sC[c.lv], width:42, textAlign:"right" }}>{sL[c.lv]} {c.corr}%</span>
+                          <span style={{ ...S.mono, fontSize:".72rem", color:sC[c.lv], width:42, textAlign:"right" }}>{(locale==='en'?sL_EN:sL_ZH)[c.lv]} {c.corr}%</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* BaZi deep analysis */}
-                {dst?.bazi_analysis && (
-                  <div style={{ ...S.card, borderColor:"rgba(196,162,101,.08)" }}>
-                    <div style={{ ...S.mono, fontSize:".72rem", color:"#c4a265", marginBottom:8, letterSpacing:".15em" }}>{t('analysis.dualBrainTitle')}</div>
-                    {[
-                      ["📋", "pillars", locale==='en'?"Pillars":"四柱"],
-                      ["📐", "pattern", locale==='en'?"Pattern":"格局"],
-                      ["🏥", "health_map", locale==='en'?"Health Map":"健康"],
-                      // Legacy field fallbacks
-                      ["📋", "pillars_detail", locale==='en'?"Pillars":"四柱"],
-                      ["📐", "pattern", locale==='en'?"Pattern":"格局"],
-                      ["⚡", "tiangang_relations", locale==='en'?"Stems":"天干"],
-                      ["🔄", "dizhi_relations", locale==='en'?"Branches":"地支"],
-                      ["⭐", "shenshas", locale==='en'?"Stars":"神煞"],
-                    ].map(([icon, key, label]) => dst.bazi_analysis[key] ? (
-                      <div key={key} style={{ fontSize:".8rem", color:"#9a9488", lineHeight:1.6, marginBottom:4, padding:"4px 8px", background:"rgba(196,162,101,.02)" }}>
-                        <span style={{ color:"#6a5a35" }}>{icon} {label}:</span> {dst.bazi_analysis[key]}
-                      </div>
-                    ) : null)}
-                  </div>
-                )}
               </div>
 
               {/* RIGHT: 3-Layer Analysis Architecture */}
@@ -2249,9 +2229,9 @@ ${days.map(d=>`<div class="day">
           {/* ══ LIFE TUNING ══ */}
           {tab==="tuning" && (
             <div>
-              {dst?.life_tuning ? (
+              {(sci?.items?.length > 0 || dst?.collision_items?.length > 0) ? (
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                  {/* Medical advice — left brain */}
+                  {/* Clinical Tuning — left brain */}
                   <div style={{ ...S.card, borderLeft:"3px solid #52b09a" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
                       <div style={{ width:10, height:10, borderRadius:"50%", background:"#52b09a" }}/>
@@ -2260,16 +2240,19 @@ ${days.map(d=>`<div class="day">
                         <div style={{ fontSize:".75rem", color:"#3a3832", fontStyle:"italic" }}>{t('tuning.leftBrainSub')}</div>
                       </div>
                     </div>
-                    {(dst.life_tuning.medical_advice || []).map((a, i) => (
+                    {(sci?.items || []).filter(it => it.recommendation).map((it, i) => (
                       <div key={i} style={{ padding:"12px 14px", background:"#16161c", borderLeft:"2px solid #52b09a44", marginBottom:8, fontSize:".9rem", color:"#9a9488", lineHeight:1.8 }}>
-                        <span style={{ color:"#52b09a", marginRight:8 }}>💊 {i + 1}.</span>{a}
+                        <span style={{ color:"#52b09a", marginRight:8 }}>💊 {locale==='en' ? elName(normalizeEl(it.organ_system)) : normalizeEl(it.organ_system)}</span>
+                        {it.recommendation}
                       </div>
                     ))}
+                    {!(sci?.items || []).some(it => it.recommendation) && (
+                      <div style={{ fontSize:".82rem", color:"#3a3832", padding:12 }}>{locale==='en' ? 'Run analysis to generate clinical recommendations.' : '运行分析以生成临床建议。'}</div>
+                    )}
                   </div>
 
-                  {/* Destiny advice — right brain */}
+                  {/* Energetic Tuning — right brain */}
                   <div style={{ ...S.card, borderLeft:"3px solid #c4a265", position:"relative", overflow:"hidden" }}>
-                    {/* Ink landscape watermark */}
                     <svg viewBox="0 0 300 120" style={{ position:"absolute", right:0, bottom:0, width:280, height:100, opacity:.02, pointerEvents:"none" }}>
                       <path d="M0 120 Q30 60 60 80 Q90 40 120 70 Q150 20 180 50 Q210 10 240 40 Q270 30 300 60 L300 120Z" fill="#c4a265"/>
                       <path d="M0 120 Q40 80 80 95 Q120 60 160 85 Q200 50 240 75 Q280 60 300 80 L300 120Z" fill="#c4a265" opacity=".5"/>
@@ -2281,11 +2264,16 @@ ${days.map(d=>`<div class="day">
                         <div style={{ fontSize:".75rem", color:"#3a3832", fontStyle:"italic" }}>{t('tuning.rightBrainSub')}</div>
                       </div>
                     </div>
-                    {(dst.life_tuning.destiny_advice || []).map((a, i) => (
+                    {(dst?.collision_items || []).filter(it => it.prevention).map((it, i) => (
                       <div key={i} style={{ padding:"12px 14px", background:"#16161c", borderLeft:"2px solid #c4a26544", marginBottom:8, fontSize:".9rem", color:"#9a9488", lineHeight:1.8 }}>
-                        <span style={{ color:"#c4a265", marginRight:8 }}>🛡 {i + 1}.</span>{a}
+                        <span style={{ color:"#c4a265", marginRight:8 }}>🛡 {locale==='en' ? elName(it.organ_wuxing) : it.organ_wuxing}</span>
+                        {it.prevention}
+                        {it.risk_window && <span style={{ fontSize:".75rem", color:"#d4a840", marginLeft:8 }}>({it.risk_window})</span>}
                       </div>
                     ))}
+                    {!(dst?.collision_items || []).some(it => it.prevention) && (
+                      <div style={{ fontSize:".82rem", color:"#3a3832", padding:12 }}>{locale==='en' ? 'Run analysis to generate energetic guidance.' : '运行分析以生成能量调谐建议。'}</div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -2294,10 +2282,18 @@ ${days.map(d=>`<div class="day">
                 </div>
               )}
 
-              {/* Key dates */}
+              {/* Key dates + temporal */}
+              {dst?.temporal_outlook && (
+                <div style={{ ...S.card, marginTop:16 }}>
+                  <div style={{ ...S.mono, fontSize:".65rem", color:"#6a5a35", letterSpacing:".2em", marginBottom:8 }}>
+                    {locale==='en' ? 'TEMPORAL RHYTHM' : '时间节律'}
+                  </div>
+                  <div style={{ fontSize:".85rem", color:"#9a9488", lineHeight:1.8 }}>{dst.temporal_outlook}</div>
+                </div>
+              )}
               {dst?.key_dates?.length > 0 && (
                 <div style={{ ...S.card, marginTop:16 }}>
-                  <div style={S.label}>{t('tuning.keyDates')}</div>
+                  <div style={S.label}>{locale==='en' ? 'KEY TEMPORAL NODES' : '关键时间节点'}</div>
                   <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:8 }}>
                     {dst.key_dates.map((d, i) => (
                       <div key={i} style={{ padding:"10px 14px", background:"#16161c", borderLeft:"2px solid #d4a840", fontSize:".9rem", color:"#d4a840", lineHeight:1.7 }}>
@@ -2306,6 +2302,29 @@ ${days.map(d=>`<div class="day">
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Deep Dive — chart methodology */}
+              {dst?.bazi_analysis && (
+                <details style={{ ...S.card, cursor:"pointer", marginTop:16 }}>
+                  <summary style={{ 
+                    ...S.mono, fontSize:".7rem", color:"#6a5a35", letterSpacing:".15em", 
+                    outline:"none", listStyle:"none", padding:"4px 0",
+                  }}>
+                    ▸ {locale==='en' ? 'DEEP DIVE · CHART METHODOLOGY' : '深层推演 · 命盘推导'}
+                  </summary>
+                  <div style={{ marginTop:12 }}>
+                    {[
+                      ["📋", "pillars", locale==='en'?"Pillars":"四柱"],
+                      ["📐", "pattern", locale==='en'?"Pattern":"格局"],
+                      ["🏥", "health_map", locale==='en'?"Health Map":"健康地图"],
+                    ].map(([icon, key, label]) => dst.bazi_analysis[key] ? (
+                      <div key={key} style={{ fontSize:".82rem", color:"#9a9488", lineHeight:1.7, marginBottom:6, padding:"6px 10px", background:"rgba(196,162,101,.02)", borderLeft:"2px solid rgba(196,162,101,.08)" }}>
+                        <span style={{ color:"#c4a265", fontWeight:600 }}>{icon} {label}:</span> {dst.bazi_analysis[key]}
+                      </div>
+                    ) : null)}
+                  </div>
+                </details>
               )}
             </div>
           )}
