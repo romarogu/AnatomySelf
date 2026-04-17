@@ -1,4 +1,4 @@
-export const config = { api: { bodyParser: false } };
+export const config = { api: { bodyParser: { sizeLimit: '1mb' } } };
 
 function parseJson(txt) {
   if (!txt) return null;
@@ -22,13 +22,6 @@ function parseJson(txt) {
   }
 }
 
-async function readBody(req) {
-  return new Promise((resolve) => {
-    let data = '';
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', () => { try { resolve(JSON.parse(data)); } catch { resolve({}); } });
-  });
-}
 
 // ═══════════════════════════════════════════════════════════════
 // SYSTEM PROMPTS — Digital Alchemist (Meta Brain)
@@ -94,8 +87,7 @@ const SYSTEM_ZH = `### 角色：AnatomySelf 数字炼金术师（命理脑）
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
   try {
-    const body = await readBody(req);
-    const { chartData, baziStr, lang } = body;
+    const { chartData, baziStr, lang } = req.body;
     const isEn = lang === 'en';
 
     const ZHIPU_KEY = process.env.ZHIPU_API_KEY;
@@ -109,7 +101,7 @@ export default async function handler(req, res) {
 
     const userMsg = isEn
 ? `CHART DATA (exact, do not recalculate):
-${JSON.stringify(chartData, null, 2)}
+${JSON.stringify(chartData)}
 
 BaZi: ${baziStr} | NOW: ${Y}/${M}
 ${astro ? 'Solar note: ' + astro : ''}
@@ -119,7 +111,7 @@ Reply with ONLY this JSON (current_forces MUST be 2-3 full sentences, NEVER just
 {"bazi_analysis":{"pillars":"describe 4 pillars and their elements","pattern":"day master strength + useful/harmful gods","health_map":"which organs strong/weak based on elements"},"collision_items":[{"organ_wuxing":"木","current_forces":"Wood dominates at X%, fueled by [pillar relationship]. The [luck/annual pillar] channels this energy into [organ effect]. This manifests as [specific symptom or tendency].","risk_window":"${Y}/M-M","prevention":"1 concrete daily action with specific duration/frequency"},{"organ_wuxing":"火","current_forces":"Fire is [strong/weak] at X% because [reason from pillars]. [Effect on Heart/circulation]. [How it interacts with other elements this year].","risk_window":"","prevention":"1 action"},{"organ_wuxing":"土","current_forces":"[2-3 full sentences analyzing Earth/Spleen dynamics]","risk_window":"","prevention":"1 action"},{"organ_wuxing":"金","current_forces":"[2-3 full sentences analyzing Metal/Lung dynamics]","risk_window":"","prevention":"1 action"},{"organ_wuxing":"水","current_forces":"[2-3 full sentences analyzing Water/Kidney dynamics]","risk_window":"","prevention":"1 action"}],"temporal_outlook":"3-4 sentences on the next 12 months from ${Y}/${M}","key_dates":["${Y}/month: brief reason","${Y}/month: brief reason","${Y}/month: brief reason"]}`
 
 : `【排盘数据（精确值，严禁重算）】
-${JSON.stringify(chartData, null, 2)}
+${JSON.stringify(chartData)}
 
 八字：${baziStr} | 当前：${Y}年${M}月
 ${astro ? '天文备注：' + astro : ''}
