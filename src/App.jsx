@@ -952,9 +952,10 @@ function Dashboard({ user, setUser, onLogout }) {
   const [metrics, setMetrics] = useState(initMetrics);
   const [metricsLoaded, setMetricsLoaded] = useState(false);
 
-  // Load metrics from Supabase on mount
+  // Load metrics from Supabase on mount (with 3s timeout guarantee)
   useEffect(() => {
     if (!user.userId) { setMetricsLoaded(true); return; }
+    const timeout = setTimeout(() => setMetricsLoaded(true), 3000); // Guarantee unlock after 3s
     (async () => {
       try {
         const cloudMetrics = await apiLoadMetrics(user.userId);
@@ -970,8 +971,10 @@ function Dashboard({ user, setUser, onLogout }) {
           });
         }
       } catch (e) { console.error('Load metrics error:', e); }
+      clearTimeout(timeout);
       setMetricsLoaded(true);
     })();
+    return () => clearTimeout(timeout);
   }, [user.userId]);
   const [file, setFile] = useState(null);
   const [ocr, setOcr] = useState(null);
@@ -2490,11 +2493,9 @@ ${days.map(d=>`<div class="day">
                   "如果不干预，半年后哪些指标可能恶化？","我最应该优先改善哪个指标？",
                 ];
                 const pool = chatBrain === "science" ? SCI_Q : META_Q;
-                // Deterministic daily shuffle: pick 3 based on date
-                const seed = new Date().getDate() * 7 + (chatBrain === "science" ? 0 : 3);
-                const picks = [0,1,2].map(i => pool[(seed * 13 + i * 17) % pool.length]);
-                // Deduplicate
-                const unique = [...new Set(picks)].slice(0, 3);
+                // True random picks each render
+                const shuffled = [...pool].sort(() => Math.random() - 0.5);
+                const unique = shuffled.slice(0, 3);
 
                 return (
                   <div style={{ display:"flex", gap:6, padding:"8px 0", flexWrap:"wrap" }}>
