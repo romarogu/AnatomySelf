@@ -210,11 +210,11 @@ export async function apiDestiny({ chartData, baziStr, lang }) {
   return resp.json();
 }
 
-export async function apiChat(brain, message, context, lang) {
+export async function apiChat({ brain, question, context, lang }) {
   const resp = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ brain, message, context, lang }),
+    body: JSON.stringify({ brain, question, context, lang }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
