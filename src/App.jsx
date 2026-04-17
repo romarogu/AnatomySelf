@@ -1047,25 +1047,32 @@ function Dashboard({ user, setUser, onLogout }) {
     try { if (user.userId) await apiSaveMetrics(user.userId, newMetrics); } catch (e) { console.error('Metrics save error:', e); }
   }, [user, setUser]);
 
-  // Persist analysis results to Supabase
+  // Persist analysis results to Supabase — only save real results
   useEffect(() => {
-    if (sci && user.userId) {
+    if (sci && sci.items && sci.items.length > 0 && user.userId) {
       apiSaveAnalysis(user.userId, 'science', sci).catch(() => {});
     }
   }, [sci]);
   useEffect(() => {
-    if (dst && user.userId) {
+    if (dst && (dst.collision_items?.length > 0 || dst.bazi_analysis) && user.userId) {
       apiSaveAnalysis(user.userId, 'destiny', dst).catch(() => {});
     }
   }, [dst]);
 
-  // Restore cached analysis on mount
+  // Restore cached analysis on mount — only if they have real content
   useEffect(() => {
     if (!user.userId) return;
     (async () => {
       try {
-        if (!sci) { const cached = await apiLoadLatestAnalysis(user.userId, 'science'); if (cached) setSci(cached); }
-        if (!dst) { const cached = await apiLoadLatestAnalysis(user.userId, 'destiny'); if (cached) setDst(cached); }
+        if (!sci) {
+          const cached = await apiLoadLatestAnalysis(user.userId, 'science');
+          // Only restore if it has actual analysis items (not empty/error)
+          if (cached && cached.items && cached.items.length > 0) setSci(cached);
+        }
+        if (!dst) {
+          const cached = await apiLoadLatestAnalysis(user.userId, 'destiny');
+          if (cached && (cached.collision_items?.length > 0 || cached.bazi_analysis)) setDst(cached);
+        }
       } catch {}
     })();
   }, [user.userId]); // eslint-disable-line
