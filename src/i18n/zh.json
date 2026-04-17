@@ -81,7 +81,7 @@
     "pipeline": { "upload": "上传", "ocr": "OCR", "science": "科学脑", "destiny": "命理脑" },
     "step1": "步骤1 · 文件导入",
     "uploadPrompt": "上传体检报告截图",
-    "uploadSub": "支持 PNG / JPG（拍照或截图）",
+    "uploadSub": "支持 PNG / JPG / PDF（拍照、截图或报告文件）",
     "uploaded": "已上传",
     "clickReplace": "点击更换",
     "ocrRunning": "多模态 OCR 提取中...",

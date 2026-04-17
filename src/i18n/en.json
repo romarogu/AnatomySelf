@@ -81,7 +81,7 @@
     "pipeline": { "upload": "Upload", "ocr": "OCR", "science": "Science", "destiny": "Meta" },
     "step1": "Step 1 · Import File",
     "uploadPrompt": "Upload Lab Report Image",
-    "uploadSub": "Supports PNG / JPG (photo or screenshot)",
+    "uploadSub": "Supports PNG / JPG / PDF (photo, screenshot, or report file)",
     "uploaded": "Uploaded",
     "clickReplace": "Click to replace",
     "ocrRunning": "Multi-modal OCR extracting...",

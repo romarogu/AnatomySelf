@@ -1095,6 +1095,13 @@ function Dashboard({ user, setUser, onLogout }) {
   // ── OCR ──
   const doOCR = useCallback(async (e) => {
     const f = e.target.files?.[0]; if(!f) return;
+    // File size check: Vercel has 4.5MB body limit, base64 adds ~33%
+    const maxSize = f.type === 'application/pdf' ? 3 * 1024 * 1024 : 8 * 1024 * 1024; // PDF: 3MB, Image: 8MB
+    if (f.size > maxSize) {
+      const limitMB = Math.round(maxSize / 1024 / 1024);
+      setOcr({ error: locale==='en' ? `File too large (${(f.size/1024/1024).toFixed(1)}MB). Maximum ${limitMB}MB for ${f.type === 'application/pdf' ? 'PDF' : 'images'}.` : `文件过大（${(f.size/1024/1024).toFixed(1)}MB）。${f.type === 'application/pdf' ? 'PDF' : '图片'}最大${limitMB}MB。` });
+      return;
+    }
     setFile(f); setOcr(null); setSci(null); setDst(null);
     setPipe(p=>p.map((s,i)=>({...s,st:i===0?"done":"idle"})));
     setOcrL(true); setPipe(p=>p.map((s,i)=>i===1?{...s,st:"running"}:s));
@@ -1782,7 +1789,7 @@ ${days.map(d=>`<div class="day">
                     border:"1px dashed rgba(196,162,101,.2)", padding:"36px 20px", textAlign:"center",
                     cursor:"pointer", background:file?"rgba(82,176,154,.04)":"transparent", marginTop:10, transition:"all .3s"
                   }}>
-                    <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp" onChange={doOCR} style={{ display:"none" }}/>
+                    <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp,.pdf" onChange={doOCR} style={{ display:"none" }}/>
                     {file ? (
                       <div><div style={{ fontSize:"1rem", color:"#52b09a" }}>✓ {file.name}</div><div style={{ fontSize:".8rem", color:"#5e5a52", marginTop:4 }}>{(file.size/1024).toFixed(1)}KB</div></div>
                     ) : (
