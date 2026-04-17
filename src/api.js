@@ -180,17 +180,21 @@ export async function apiOCR(file) {
   return resp.json();
 }
 
-export async function apiScience(metrics, age, sex, lang) {
+export async function apiScience({ age, sex, anomalies, allMetrics, lang }) {
+  console.log('[apiScience] calling with', { age, sex, anomaliesCount: anomalies?.length, allMetricsCount: allMetrics?.length, lang });
   const resp = await fetch('/api/science', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ metrics, age, sex, lang }),
+    body: JSON.stringify({ age, sex, anomalies, allMetrics, lang }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
+    console.error('[apiScience] error:', err);
     throw new Error(err.error || 'Science analysis failed');
   }
-  return resp.json();
+  const result = await resp.json();
+  console.log('[apiScience] success:', result?.sentinel || result?.summary || 'parsed');
+  return result;
 }
 
 export async function apiDestiny({ chartData, baziStr, lang }) {
