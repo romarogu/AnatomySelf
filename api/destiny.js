@@ -2,12 +2,38 @@ export const config = { api: { bodyParser: false } };
 
 function parseJson(txt) {
   if (!txt) return null;
+  // Strip markdown code blocks
   let s = txt.trim().replace(/^```+\s*(?:json)?\s*\n?/i, '').replace(/\n?\s*```+\s*$/g, '').trim();
   const i = s.indexOf('{'); if (i < 0) return null; s = s.substring(i);
+  // Find matching closing brace
   let d = 0, e = -1;
   for (let j = 0; j < s.length; j++) { if (s[j] === '{') d++; if (s[j] === '}') { d--; if (d === 0) { e = j; break; } } }
   if (e > 0) s = s.substring(0, e + 1);
-  try { return JSON.parse(s); } catch { try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); } catch { return null; } }
+  // If truncated (no matching brace), try to close it
+  if (e < 0) {
+    // Count open braces/brackets and close them
+    let opens = 0, openB = 0;
+    for (const c of s) { if (c === '{') opens++; if (c === '}') opens--; if (c === '[') openB++; if (c === ']') openB--; }
+    // Remove trailing comma if any
+    s = s.replace(/,\s*$/, '');
+    // Close open brackets/braces
+    while (openB > 0) { s += ']'; openB--; }
+    while (opens > 0) { s += '}'; opens--; }
+  }
+  try { return JSON.parse(s); } catch {
+    // Try fixing trailing commas
+    try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); } catch {
+      // Last resort: try extracting just key fields
+      try {
+        const sentinel = s.match(/"sentinel"\s*:\s*"([^"]+)"/)?.[1];
+        const outlook = s.match(/"temporal_outlook"\s*:\s*"([^"]+)"/)?.[1];
+        if (sentinel || outlook) {
+          return { collision_items: [], sentinel, temporal_outlook: outlook || '', bazi_analysis: null };
+        }
+      } catch {}
+      return null;
+    }
+  }
 }
 
 async function readBody(req) {
@@ -69,20 +95,13 @@ BaZi: ${baziStr}
 ${astroNote ? 'ASTRONOMICAL NOTE: ' + astroNote : ''}
 
 Generate collision_items for ALL 5 elements. organ_wuxing MUST be Chinese character: 木/火/土/金/水.
-Keep current_forces ≤30 words, prevention ≤20 words (concrete daily action). temporal_outlook ≤60 words.
+Keep ALL text fields SHORT. No field over 30 words. Return COMPACT JSON, no extra whitespace.
 
-Return JSON:
-{"bazi_analysis":{"pillars":"≤40w","pattern":"≤40w","health_map":"≤40w"},
-"collision_items":[
-  {"organ_wuxing":"木","current_forces":"≤30w","risk_window":"month range in ${Y}","prevention":"concrete action ≤20w"},
-  {"organ_wuxing":"火","current_forces":"≤30w","risk_window":"","prevention":"≤20w"},
-  {"organ_wuxing":"土","current_forces":"≤30w","risk_window":"","prevention":"≤20w"},
-  {"organ_wuxing":"金","current_forces":"≤30w","risk_window":"","prevention":"≤20w"},
-  {"organ_wuxing":"水","current_forces":"≤30w","risk_window":"","prevention":"≤20w"}
-],
-"life_tuning":{"medical_advice":["concrete action","",""],"destiny_advice":["food/color/direction","",""]},
-"temporal_outlook":"≤60w outlook from ${Y}/${M}",
-"key_dates":["${Y}/Month: reason"]}` :
+Return JSON (no markdown, no code blocks):
+{"bazi_analysis":{"pillars":"≤30w","pattern":"≤30w","health_map":"≤30w"},
+"collision_items":[{"organ_wuxing":"木","current_forces":"≤25w","risk_window":"${Y}/M-M","prevention":"≤15w"},{"organ_wuxing":"火","current_forces":"≤25w","risk_window":"","prevention":"≤15w"},{"organ_wuxing":"土","current_forces":"≤25w","risk_window":"","prevention":"≤15w"},{"organ_wuxing":"金","current_forces":"≤25w","risk_window":"","prevention":"≤15w"},{"organ_wuxing":"水","current_forces":"≤25w","risk_window":"","prevention":"≤15w"}],
+"temporal_outlook":"≤50w from ${Y}/${M}",
+"key_dates":["${Y}/M: reason"]}` :
 
 `【确定性排盘数据 — 服务器计算，严禁重新推导】
 ${JSON.stringify(chartData, null, 2)}
@@ -91,19 +110,12 @@ ${JSON.stringify(chartData, null, 2)}
 ⚠ 当前日期：${Y}年${M}月 — 所有预测必须是${Y}年或以后。严禁提到${Y-1}年或更早的年份。
 ${astroNote ? '【天文备注】' + astroNote : ''}
 
-为五行全部生成collision_items（木火土金水）。current_forces≤30字，prevention≤20字（具体日常行动）。temporal_outlook≤60字。
+为五行全部生成collision_items（木火土金水）。所有字段保持简短，不超过30字。返回紧凑JSON，不要markdown。
 
-返回JSON：
-{"bazi_analysis":{"pillars":"≤40字","pattern":"≤40字","health_map":"≤40字"},
-"collision_items":[
-  {"organ_wuxing":"木","current_forces":"≤30字","risk_window":"${Y}年月份范围","prevention":"具体行动≤20字"},
-  {"organ_wuxing":"火","current_forces":"≤30字","risk_window":"","prevention":"≤20字"},
-  {"organ_wuxing":"土","current_forces":"≤30字","risk_window":"","prevention":"≤20字"},
-  {"organ_wuxing":"金","current_forces":"≤30字","risk_window":"","prevention":"≤20字"},
-  {"organ_wuxing":"水","current_forces":"≤30字","risk_window":"","prevention":"≤20字"}
-],
-"life_tuning":{"medical_advice":["具体行动","",""],"destiny_advice":["食物/颜色/方位","",""]},
-"temporal_outlook":"从${Y}年${M}月起≤60字展望",
+返回JSON（不要代码块）：
+{"bazi_analysis":{"pillars":"≤30字","pattern":"≤30字","health_map":"≤30字"},
+"collision_items":[{"organ_wuxing":"木","current_forces":"≤25字","risk_window":"${Y}年M月","prevention":"≤15字"},{"organ_wuxing":"火","current_forces":"≤25字","risk_window":"","prevention":"≤15字"},{"organ_wuxing":"土","current_forces":"≤25字","risk_window":"","prevention":"≤15字"},{"organ_wuxing":"金","current_forces":"≤25字","risk_window":"","prevention":"≤15字"},{"organ_wuxing":"水","current_forces":"≤25字","risk_window":"","prevention":"≤15字"}],
+"temporal_outlook":"从${Y}年${M}月起≤50字",
 "key_dates":["${Y}年X月：原因"]}`;
 
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -111,7 +123,7 @@ ${astroNote ? '【天文备注】' + astroNote : ''}
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
       body: JSON.stringify({
         model: 'deepseek-chat',
-        max_tokens: 3000,
+        max_tokens: 4000,
         temperature: 0.15,
         messages: [
           { role: 'system', content: isEn ? SYSTEM_EN : SYSTEM_ZH },
