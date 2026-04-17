@@ -89,8 +89,8 @@ BaZi: ${baziStr} | NOW: ${Y}/${M}
 ${astro ? 'Solar note: ' + astro : ''}
 ${health ? 'Health findings: ' + health : ''}
 
-Reply with ONLY this JSON structure:
-{"bazi_analysis":{"pillars":"describe 4 pillars","pattern":"day master strength + useful/harmful gods","health_map":"which organs strong/weak based on elements"},"collision_items":[{"organ_wuxing":"木","current_forces":"2-3 sentences on Wood/Liver status this year","risk_window":"${Y} month range","prevention":"1 concrete daily action"},{"organ_wuxing":"火","current_forces":"2-3 sentences","risk_window":"","prevention":"1 action"},{"organ_wuxing":"土","current_forces":"2-3 sentences","risk_window":"","prevention":"1 action"},{"organ_wuxing":"金","current_forces":"2-3 sentences","risk_window":"","prevention":"1 action"},{"organ_wuxing":"水","current_forces":"2-3 sentences","risk_window":"","prevention":"1 action"}],"temporal_outlook":"3-4 sentences on the next 12 months from ${Y}/${M}","key_dates":["${Y}/month: brief reason","${Y}/month: brief reason","${Y}/month: brief reason"]}`
+Reply with ONLY this JSON structure (current_forces MUST be 2-3 full sentences like the example below, NEVER just a number):
+{"bazi_analysis":{"pillars":"describe 4 pillars and their elements","pattern":"day master strength + useful/harmful gods","health_map":"which organs strong/weak based on elements"},"collision_items":[{"organ_wuxing":"木","current_forces":"Wood dominates at X%, fueled by [pillar relationship]. The [luck/annual pillar] channels this energy into [organ effect]. This manifests as [specific symptom or tendency].","risk_window":"${Y}/M-M","prevention":"1 concrete daily action with specific duration/frequency"},{"organ_wuxing":"火","current_forces":"Fire is [strong/weak] at X% because [reason from pillars]. [Effect on Heart/circulation]. [How it interacts with other elements this year].","risk_window":"","prevention":"1 action"},{"organ_wuxing":"土","current_forces":"[2-3 full sentences analyzing Earth/Spleen dynamics]","risk_window":"","prevention":"1 action"},{"organ_wuxing":"金","current_forces":"[2-3 full sentences analyzing Metal/Lung dynamics]","risk_window":"","prevention":"1 action"},{"organ_wuxing":"水","current_forces":"[2-3 full sentences analyzing Water/Kidney dynamics]","risk_window":"","prevention":"1 action"}],"temporal_outlook":"3-4 sentences on the next 12 months from ${Y}/${M}","key_dates":["${Y}/month: brief reason","${Y}/month: brief reason","${Y}/month: brief reason"]}`
 
 : `【排盘数据（精确值，严禁重算）】
 ${JSON.stringify(chartData, null, 2)}
@@ -99,8 +99,8 @@ ${JSON.stringify(chartData, null, 2)}
 ${astro ? '天文备注：' + astro : ''}
 ${health ? '健康发现：' + health : ''}
 
-只返回以下JSON结构：
-{"bazi_analysis":{"pillars":"四柱描述","pattern":"日主强弱+用神忌神","health_map":"哪些脏腑强/弱"},"collision_items":[{"organ_wuxing":"木","current_forces":"2-3句描述今年木/肝状况","risk_window":"${Y}年X-X月","prevention":"1个具体日常行动"},{"organ_wuxing":"火","current_forces":"2-3句","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"土","current_forces":"2-3句","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"金","current_forces":"2-3句","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"水","current_forces":"2-3句","risk_window":"","prevention":"1个行动"}],"temporal_outlook":"3-4句话展望从${Y}年${M}月起的12个月","key_dates":["${Y}年X月：简要原因","${Y}年X月：简要原因","${Y}年X月：简要原因"]}`;
+只返回以下JSON结构（current_forces必须是2-3句完整分析，绝不能只写一个数字）：
+{"bazi_analysis":{"pillars":"四柱及其元素描述","pattern":"日主强弱+用神忌神","health_map":"哪些脏腑强/弱"},"collision_items":[{"organ_wuxing":"木","current_forces":"木气以X%占据主导，因日主[关系]深根于[支]。当前[大运/流年]引木气入[脏腑]，造成[具体影响]。肝气郁结外显为[症状倾向]。","risk_window":"${Y}年X-X月","prevention":"1个具体日常行动（含时长/频率）"},{"organ_wuxing":"火","current_forces":"火行以X%处于[强/弱]态，因[柱中关系]。[对心脏/循环的影响]。[与其他元素的互动]。","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"土","current_forces":"[2-3句完整分析土/脾胃动态]","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"金","current_forces":"[2-3句完整分析金/呼吸动态]","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"水","current_forces":"[2-3句完整分析水/肾脏动态]","risk_window":"","prevention":"1个行动"}],"temporal_outlook":"3-4句话展望从${Y}年${M}月起的12个月","key_dates":["${Y}年X月：简要原因","${Y}年X月：简要原因","${Y}年X月：简要原因"]}`;
 
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
