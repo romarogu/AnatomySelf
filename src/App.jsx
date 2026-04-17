@@ -2074,72 +2074,70 @@ ${days.map(d=>`<div class="day">
                           </div>
 
                           {/* Two-column: Science | Meta */}
-                          {(() => {
-                            const isExpanded = expandedCards[g.el];
-                            // Summary: first sentence only
-                            const clinFull = sciItem?.clinical_fact || sciItem?.physiological_analysis || '';
-                            const clinSummary = clinFull.split(/[.。！!]/)[0] + (clinFull.includes('.') || clinFull.includes('。') ? '.' : '');
-                            const enerFull = dstItem?.current_forces || '';
-                            const enerSummary = enerFull.split(/[.。！!]/)[0] + (enerFull.includes('.') || enerFull.includes('。') ? '.' : '');
-                            const hasDetail = (clinFull.length > clinSummary.length) || (enerFull.length > enerSummary.length);
-
-                            return (
-                              <>
-                                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
-                                  {/* Science Brain — Clinical */}
-                                  <div style={{ padding:"12px 16px", borderRight:"1px solid rgba(196,162,101,.06)" }}>
-                                    <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:8 }}>
-                                      <div style={{ width:5, height:5, borderRadius:"50%", background:"#52b09a" }}/>
-                                      <span style={{ ...S.mono, fontSize:".62rem", color:"#52b09a", letterSpacing:".1em" }}>CLINICAL</span>
-                                    </div>
-                                    {sciItem ? (
-                                      <>
-                                        <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:6, fontWeight: isCritical ? 600 : 400 }}>
-                                          {isExpanded ? clinFull : clinSummary}
-                                        </div>
-                                        <div style={{ fontSize:".88rem", color:"#52b09a", fontWeight:500, marginTop:6 }}>→ {sciItem.recommendation}</div>
-                                      </>
-                                    ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
+                            {/* Science Brain — Clinical */}
+                            <div style={{ padding:"12px 16px", borderRight:"1px solid rgba(196,162,101,.06)" }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:8 }}>
+                                <div style={{ width:5, height:5, borderRadius:"50%", background:"#52b09a" }}/>
+                                <span style={{ ...S.mono, fontSize:".62rem", color:"#52b09a", letterSpacing:".1em" }}>CLINICAL</span>
+                              </div>
+                              {sciItem ? (
+                                <>
+                                  <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:6, fontWeight: isCritical ? 600 : 400 }}>
+                                    {expandedCards[g.el]
+                                      ? (sciItem.clinical_fact || sciItem.physiological_analysis || '—')
+                                      : (sciItem.clinical_fact || sciItem.physiological_analysis || '—').replace(/([.。！!？?])\s*/g, '$1|||').split('|||')[0]
+                                    }
                                   </div>
+                                  {expandedCards[g.el] && sciItem.recommendation && (
+                                    <div style={{ fontSize:".88rem", color:"#52b09a", fontWeight:500, marginTop:6 }}>→ {sciItem.recommendation}</div>
+                                  )}
+                                </>
+                              ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
+                            </div>
 
-                                  {/* Meta Brain — Energetic */}
-                                  <div style={{ padding:"12px 16px" }}>
-                                    <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:8 }}>
-                                      <div style={{ width:5, height:5, borderRadius:"50%", background:"#c4a265" }}/>
-                                      <span style={{ ...S.mono, fontSize:".62rem", color:"#c4a265", letterSpacing:".1em" }}>ENERGETIC</span>
-                                    </div>
-                                    {dstItem ? (
-                                      <>
-                                        <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:4 }}>
-                                          {isExpanded ? enerFull : enerSummary}
-                                        </div>
-                                        {isExpanded && dstItem.risk_window && (
-                                          <div style={{ fontSize:".75rem", color:"#d4a840", marginBottom:4 }}>⏱ {dstItem.risk_window}</div>
-                                        )}
-                                        <div style={{ fontSize:".88rem", color:"#c4a265", fontWeight:500, marginTop:6 }}>→ {dstItem.prevention}</div>
-                                      </>
-                                    ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
+                            {/* Meta Brain — Energetic */}
+                            <div style={{ padding:"12px 16px" }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:8 }}>
+                                <div style={{ width:5, height:5, borderRadius:"50%", background:"#c4a265" }}/>
+                                <span style={{ ...S.mono, fontSize:".62rem", color:"#c4a265", letterSpacing:".1em" }}>ENERGETIC</span>
+                              </div>
+                              {dstItem ? (
+                                <>
+                                  <div style={{ fontSize:".85rem", color:"#d0ccc4", lineHeight:1.7, marginBottom:4 }}>
+                                    {expandedCards[g.el]
+                                      ? dstItem.current_forces
+                                      : (dstItem.current_forces || '—').replace(/([.。！!？?])\s*/g, '$1|||').split('|||')[0]
+                                    }
                                   </div>
-                                </div>
+                                  {expandedCards[g.el] && dstItem.risk_window && (
+                                    <div style={{ fontSize:".75rem", color:"#d4a840", marginBottom:4 }}>⏱ {dstItem.risk_window}</div>
+                                  )}
+                                  {expandedCards[g.el] && dstItem.prevention && (
+                                    <div style={{ fontSize:".88rem", color:"#c4a265", fontWeight:500, marginTop:6 }}>→ {dstItem.prevention}</div>
+                                  )}
+                                </>
+                              ) : <div style={{ fontSize:".8rem", color:"#3a3832" }}>—</div>}
+                            </div>
+                          </div>
 
-                                {/* Expand/Collapse toggle */}
-                                {hasDetail && (
-                                  <div
-                                    onClick={() => setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] }))}
-                                    style={{
-                                      padding:"6px 16px", cursor:"pointer", userSelect:"none",
-                                      borderTop:"1px solid rgba(196,162,101,.06)",
-                                      display:"flex", alignItems:"center", gap:6,
-                                    }}
-                                  >
-                                    <span style={{ ...S.mono, fontSize:".62rem", color:"#5e5a52", letterSpacing:".1em", transition:"all .2s" }}>
-                                      {isExpanded ? '▾' : '▸'} {locale==='en' ? (isExpanded ? 'COLLAPSE' : 'FULL ANALYSIS') : (isExpanded ? '收起' : '详细推导')}
-                                    </span>
-                                  </div>
-                                )}
-                              </>
-                            );
-                          })()}
+                          {/* Expand/Collapse toggle — always show */}
+                          {(sciItem || dstItem) && (
+                            <div
+                              onClick={(e) => { e.stopPropagation(); setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] })); }}
+                              style={{
+                                padding:"8px 16px", cursor:"pointer", userSelect:"none",
+                                borderTop:"1px solid rgba(196,162,101,.08)",
+                                display:"flex", alignItems:"center", gap:6,
+                                background: expandedCards[g.el] ? "rgba(196,162,101,.03)" : "transparent",
+                                transition:"background .2s",
+                              }}
+                            >
+                              <span style={{ ...S.mono, fontSize:".65rem", color: expandedCards[g.el] ? "#c4a265" : "#5e5a52", letterSpacing:".1em" }}>
+                                {expandedCards[g.el] ? '▾' : '▸'} {locale==='en' ? (expandedCards[g.el] ? 'COLLAPSE' : 'FULL ANALYSIS') : (expandedCards[g.el] ? '收起' : '展开详情')}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
