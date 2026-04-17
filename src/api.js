@@ -145,14 +145,15 @@ export async function apiSaveAnalysis(userId, type, resultJson) {
 }
 
 export async function apiLoadLatestAnalysis(userId, type) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('analyses')
     .select('result_json, created_at')
     .eq('user_id', userId)
     .eq('type', type)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
+  if (error) { console.error('Load analysis error:', error); return null; }
   return data?.result_json || null;
 }
 

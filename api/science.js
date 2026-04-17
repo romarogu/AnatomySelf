@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       return res.json({ items: [], summary: isEn ? 'No biomarkers entered. Please enter data in Data Center first.' : '暂无录入指标，请先在数据中心录入体检数据。' });
     }
 
-    const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+    const resp = await fetch('https://api.z.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     // GLM-4V multimodal — OpenAI-compatible format
     const imageUrl = `data:${mediaType};base64,${base64}`;
 
-    const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+    const resp = await fetch('https://api.z.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
