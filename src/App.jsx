@@ -1124,11 +1124,12 @@ function Dashboard({ user, setUser, onLogout }) {
   }, [metrics, saveData]);
 
   // ── SCIENCE BRAIN ──
+  const doSciRef = useRef(null);
   const doSci = useCallback(async () => {
     setSciL(true); setSci(null); setPipe(p=>p.map((s,i)=>i===2?{...s,st:"running"}:s));
     try {
-      // 构建全部已录入指标的概况（不只是异常项）
       const filledMetrics = metrics.filter(m => m.value != null);
+      console.log('[doSci] filledMetrics count:', filledMetrics.length, filledMetrics.map(m=>m.key+'='+m.value));
       const allData = filledMetrics.map(m => {
         const ref = gR(m.key, age, sex);
         if (!ref) return null;
@@ -1137,22 +1138,27 @@ function Dashboard({ user, setUser, onLogout }) {
       }).filter(Boolean);
 
       if (anoms.length > 0) {
-        // 有异常 → 重点分析异常项
         const anomalyData = anoms.map(a => ({ key: a.key, cn: a.ref.cn, value: a.value, unit: a.ref.u, low: a.ref.l, high: a.ref.h, status: a.st }));
+        console.log('[doSci] sending anomalies:', anomalyData.length);
         const res = await apiScience({ age, sex, anomalies: anomalyData, lang: locale });
         setSci(res);
-      } else {
-        // 全部正常 → 发送全部数据做健康确认
+      } else if (allData.length > 0) {
+        console.log('[doSci] sending allMetrics:', allData.length);
         const res = await apiScience({ age, sex, anomalies: [], allMetrics: allData, lang: locale });
         setSci(res);
+      } else {
+        console.log('[doSci] NO metrics to send!');
+        setSci({ items: [], summary: locale==='en' ? 'No biomarkers loaded. Please wait for data to load or enter metrics in Data Center.' : '暂无录入指标，请先在数据中心录入体检数据。' });
       }
       setPipe(p=>p.map((s,i)=>i===2?{...s,st:"done"}:s));
     } catch (err) {
+      console.error('[doSci] error:', err);
       setSci({ items: [], summary: (locale==='en'?"Science Brain error: ":"科学大脑分析失败: ") + err.message });
       setPipe(p=>p.map((s,i)=>i===2?{...s,st:"idle"}:s));
     }
     setSciL(false);
   }, [anoms, metrics, age, sex, locale]);
+  doSciRef.current = doSci; // Always keep ref updated
 
   // ── DESTINY BRAIN — 始终独立工作 ──
   const doDst = useCallback(async () => {
@@ -1462,17 +1468,16 @@ ${days.map(d=>`<div class="day">
   const startAnalysisCeremony = useCallback(async () => {
     setAnalysisActive(true);
     setAnalysisPhase(0);
-    // Progress through phases on timers
     const timers = [];
     analysisPhases.forEach((p, i) => {
       if (i > 0) timers.push(setTimeout(() => setAnalysisPhase(i), p.t));
     });
     analysisTimerRef.current = timers;
-    // Actually run the analysis
     setPipe(p=>p.map((s,i)=>i>=2?{...s,st:"idle"}:s));
     setDst(null);
-    await doSci();
-  }, [analysisPhases, doSci]);
+    // Use ref to always call latest doSci (with loaded metrics)
+    if (doSciRef.current) await doSciRef.current();
+  }, [analysisPhases]);
 
   // End ceremony when both brains complete
   useEffect(() => {
