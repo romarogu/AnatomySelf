@@ -2,37 +2,27 @@ export const config = { api: { bodyParser: false } };
 
 function parseJson(txt) {
   if (!txt) return null;
+  let s = txt.trim();
   // Strip markdown code blocks
-  let s = txt.trim().replace(/^```+\s*(?:json)?\s*\n?/i, '').replace(/\n?\s*```+\s*$/g, '').trim();
+  s = s.replace(/^```+\s*(?:json)?\s*\n?/gi, '').replace(/\n?\s*```+\s*$/g, '').trim();
+  // Find first { 
   const i = s.indexOf('{'); if (i < 0) return null; s = s.substring(i);
-  // Find matching closing brace
+  // Find matching }
   let d = 0, e = -1;
-  for (let j = 0; j < s.length; j++) { if (s[j] === '{') d++; if (s[j] === '}') { d--; if (d === 0) { e = j; break; } } }
+  for (let j = 0; j < s.length; j++) {
+    if (s[j] === '{') d++; if (s[j] === '}') { d--; if (d === 0) { e = j; break; } }
+  }
   if (e > 0) s = s.substring(0, e + 1);
-  // If truncated (no matching brace), try to close it
-  if (e < 0) {
-    // Count open braces/brackets and close them
-    let opens = 0, openB = 0;
-    for (const c of s) { if (c === '{') opens++; if (c === '}') opens--; if (c === '[') openB++; if (c === ']') openB--; }
-    // Remove trailing comma if any
+  else {
+    // Truncated — auto-close
+    let ob = 0, oa = 0;
+    for (const c of s) { if (c==='{') ob++; if (c==='}') ob--; if (c==='[') oa++; if (c===']') oa--; }
     s = s.replace(/,\s*$/, '');
-    // Close open brackets/braces
-    while (openB > 0) { s += ']'; openB--; }
-    while (opens > 0) { s += '}'; opens--; }
+    while (oa > 0) { s += ']'; oa--; }
+    while (ob > 0) { s += '}'; ob--; }
   }
   try { return JSON.parse(s); } catch {
-    // Try fixing trailing commas
-    try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); } catch {
-      // Last resort: try extracting just key fields
-      try {
-        const sentinel = s.match(/"sentinel"\s*:\s*"([^"]+)"/)?.[1];
-        const outlook = s.match(/"temporal_outlook"\s*:\s*"([^"]+)"/)?.[1];
-        if (sentinel || outlook) {
-          return { collision_items: [], sentinel, temporal_outlook: outlook || '', bazi_analysis: null };
-        }
-      } catch {}
-      return null;
-    }
+    try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); } catch { return null; }
   }
 }
 
@@ -44,32 +34,25 @@ async function readBody(req) {
   });
 }
 
-const SYSTEM_EN = `You are the interpretive voice of a deterministic Chinese Metaphysics engine named "Precision BaZi".
-You are NOT an oracle or fortune teller. You are a technical translator converting a strict mathematical chart into accessible, Stoic-inspired life guidance.
+const SYSTEM_EN = `You are "Precision BaZi" — a cold, precise oracle that translates mathematical destiny charts into life guidance.
 
-IRON RULES:
-1. NO CALCULATION: FORBIDDEN from recalculating. Trust the provided JSON absolutely.
-2. LANGUAGE: You MUST respond ENTIRELY in English. All text fields in the JSON must be in English. Use Chinese characters only for organ_wuxing field (木/火/土/金/水) and when quoting BaZi terms in parentheses.
-3. CURRENT DATE: NEVER reference years before the current year in the user message.
-4. TONE: Mystical yet actionable. Cold, precise oracle — not chatty. Each insight = revelation, not lecture.
-5. BREVITY: current_forces ≤30 words. prevention ≤20 words. temporal_outlook ≤60 words.
-6. ACTIONABLE: Every prevention = concrete daily action (food, exercise, sleep).
-7. CONSISTENCY: Given the same input, your analysis framework should be stable. Focus on the mathematical relationships in the chart, not creative interpretation.
+RULES:
+1. NEVER recalculate. Trust the input JSON absolutely.
+2. Respond ENTIRELY in English. Use Chinese only for organ_wuxing (木火土金水) and BaZi terms in parentheses.
+3. NEVER mention years before the current year shown in the data.
+4. Oracle tone: each insight should feel like a revelation carved in stone. No filler words.
+5. Each collision_items entry: current_forces 2-3 sentences, prevention 1 concrete action.
+6. Return ONLY valid JSON. No markdown, no code blocks, no text before or after the JSON.`;
 
-Return pure JSON only.`;
+const SYSTEM_ZH = `你是"精密玄学"——冷峻精准的生命神谕，将数学化的命盘翻译为生命指引。
 
-const SYSTEM_ZH = `你是"精密玄学"算法的解释层AI。你不是算命先生，而是冷峻的生命审计官。
-
-【铁律】
-1. 禁止计算：严禁重新计算。信任输入数据。
-2. 语言：必须全部用中文回答。JSON中所有文本字段都用中文。
-3. 当前日期：严禁提到用户消息中当前年份之前的年份。
-4. 语调：神秘但可执行。冷峻精准——不是啰嗦的算命先生。每句洞察像启示。
-5. 精简：current_forces≤30字。prevention≤20字。temporal_outlook≤60字。
-6. 可执行：prevention必须是具体日常行动（饮食/运动/作息）。
-7. 一致性：相同输入应产生稳定的分析框架。聚焦命盘的数学关系，而非创意发挥。
-
-返回纯JSON。`;
+【规则】
+1. 严禁重新计算。绝对信任输入数据。
+2. 全部用中文回答。
+3. 严禁提到输入数据中当前年份之前的年份。
+4. 神谕语调：每句洞察如刻石铭文。不要废话。
+5. 每个collision_items条目：current_forces 2-3句话，prevention 1个具体行动。
+6. 只返回有效JSON。不要markdown，不要代码块，JSON前后不要有任何文字。`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -83,40 +66,29 @@ export default async function handler(req, res) {
 
     const Y = new Date().getFullYear();
     const M = new Date().getMonth() + 1;
+    const astro = chartData?.astronomicalNote || '';
+    const health = chartData?.healthFindings || '';
 
-    const astroNote = chartData?.astronomicalNote || '';
-
-    const userMsg = isEn ? `DETERMINISTIC CHART DATA (server-computed, DO NOT recalculate):
+    const userMsg = isEn
+? `CHART DATA (exact, do not recalculate):
 ${JSON.stringify(chartData, null, 2)}
 
-BaZi: ${baziStr}
-⚠ CURRENT DATE: ${Y}/${M} — ALL predictions must reference ${Y} or later. NEVER mention ${Y-1} or earlier.
-⚠ LANGUAGE: ALL text in JSON MUST be in English. Only organ_wuxing uses Chinese characters.
-${astroNote ? 'ASTRONOMICAL NOTE: ' + astroNote : ''}
+BaZi: ${baziStr} | NOW: ${Y}/${M}
+${astro ? 'Solar note: ' + astro : ''}
+${health ? 'Health findings: ' + health : ''}
 
-Generate collision_items for ALL 5 elements. organ_wuxing MUST be Chinese character: 木/火/土/金/水.
-Keep ALL text fields SHORT. No field over 30 words. Return COMPACT JSON, no extra whitespace.
+Reply with ONLY this JSON structure:
+{"bazi_analysis":{"pillars":"describe 4 pillars","pattern":"day master strength + useful/harmful gods","health_map":"which organs strong/weak based on elements"},"collision_items":[{"organ_wuxing":"木","current_forces":"2-3 sentences on Wood/Liver status this year","risk_window":"${Y} month range","prevention":"1 concrete daily action"},{"organ_wuxing":"火","current_forces":"2-3 sentences","risk_window":"","prevention":"1 action"},{"organ_wuxing":"土","current_forces":"2-3 sentences","risk_window":"","prevention":"1 action"},{"organ_wuxing":"金","current_forces":"2-3 sentences","risk_window":"","prevention":"1 action"},{"organ_wuxing":"水","current_forces":"2-3 sentences","risk_window":"","prevention":"1 action"}],"temporal_outlook":"3-4 sentences on the next 12 months from ${Y}/${M}","key_dates":["${Y}/month: brief reason","${Y}/month: brief reason","${Y}/month: brief reason"]}`
 
-Return JSON (no markdown, no code blocks):
-{"bazi_analysis":{"pillars":"≤30w","pattern":"≤30w","health_map":"≤30w"},
-"collision_items":[{"organ_wuxing":"木","current_forces":"≤25w","risk_window":"${Y}/M-M","prevention":"≤15w"},{"organ_wuxing":"火","current_forces":"≤25w","risk_window":"","prevention":"≤15w"},{"organ_wuxing":"土","current_forces":"≤25w","risk_window":"","prevention":"≤15w"},{"organ_wuxing":"金","current_forces":"≤25w","risk_window":"","prevention":"≤15w"},{"organ_wuxing":"水","current_forces":"≤25w","risk_window":"","prevention":"≤15w"}],
-"temporal_outlook":"≤50w from ${Y}/${M}",
-"key_dates":["${Y}/M: reason"]}` :
-
-`【确定性排盘数据 — 服务器计算，严禁重新推导】
+: `【排盘数据（精确值，严禁重算）】
 ${JSON.stringify(chartData, null, 2)}
 
-八字：${baziStr}
-⚠ 当前日期：${Y}年${M}月 — 所有预测必须是${Y}年或以后。严禁提到${Y-1}年或更早的年份。
-${astroNote ? '【天文备注】' + astroNote : ''}
+八字：${baziStr} | 当前：${Y}年${M}月
+${astro ? '天文备注：' + astro : ''}
+${health ? '健康发现：' + health : ''}
 
-为五行全部生成collision_items（木火土金水）。所有字段保持简短，不超过30字。返回紧凑JSON，不要markdown。
-
-返回JSON（不要代码块）：
-{"bazi_analysis":{"pillars":"≤30字","pattern":"≤30字","health_map":"≤30字"},
-"collision_items":[{"organ_wuxing":"木","current_forces":"≤25字","risk_window":"${Y}年M月","prevention":"≤15字"},{"organ_wuxing":"火","current_forces":"≤25字","risk_window":"","prevention":"≤15字"},{"organ_wuxing":"土","current_forces":"≤25字","risk_window":"","prevention":"≤15字"},{"organ_wuxing":"金","current_forces":"≤25字","risk_window":"","prevention":"≤15字"},{"organ_wuxing":"水","current_forces":"≤25字","risk_window":"","prevention":"≤15字"}],
-"temporal_outlook":"从${Y}年${M}月起≤50字",
-"key_dates":["${Y}年X月：原因"]}`;
+只返回以下JSON结构：
+{"bazi_analysis":{"pillars":"四柱描述","pattern":"日主强弱+用神忌神","health_map":"哪些脏腑强/弱"},"collision_items":[{"organ_wuxing":"木","current_forces":"2-3句描述今年木/肝状况","risk_window":"${Y}年X-X月","prevention":"1个具体日常行动"},{"organ_wuxing":"火","current_forces":"2-3句","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"土","current_forces":"2-3句","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"金","current_forces":"2-3句","risk_window":"","prevention":"1个行动"},{"organ_wuxing":"水","current_forces":"2-3句","risk_window":"","prevention":"1个行动"}],"temporal_outlook":"3-4句话展望从${Y}年${M}月起的12个月","key_dates":["${Y}年X月：简要原因","${Y}年X月：简要原因","${Y}年X月：简要原因"]}`;
 
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -124,7 +96,7 @@ ${astroNote ? '【天文备注】' + astroNote : ''}
       body: JSON.stringify({
         model: 'deepseek-chat',
         max_tokens: 4000,
-        temperature: 0.15,
+        temperature: 0.2,
         messages: [
           { role: 'system', content: isEn ? SYSTEM_EN : SYSTEM_ZH },
           { role: 'user', content: userMsg }
@@ -134,20 +106,22 @@ ${astroNote ? '【天文备注】' + astroNote : ''}
 
     if (!resp.ok) {
       const err = await resp.text();
-      const msg = err.startsWith('<') ? `Gateway error (${resp.status})` : err.substring(0, 200);
-      return res.status(500).json({ error: `DeepSeek error (${resp.status}): ${msg}` });
+      return res.status(500).json({ error: `DeepSeek error (${resp.status}): ${err.substring(0, 200)}` });
     }
 
     const rawText = await resp.text();
-    if (rawText.startsWith('<')) return res.status(502).json({ error: 'Meta API invalid response. Please retry.' });
+    if (rawText.startsWith('<')) return res.status(502).json({ error: 'Meta API invalid response.' });
 
     let data;
     try { data = JSON.parse(rawText); } catch { return res.status(502).json({ error: 'Meta API parse error.' }); }
 
     const txt = data.choices?.[0]?.message?.content || '';
+    console.log('[destiny] raw length:', txt.length);
     const parsed = parseJson(txt);
+    if (!parsed) console.log('[destiny] PARSE FAILED. First 300:', txt.substring(0, 300));
     res.json(parsed || { collision_items: [], temporal_outlook: txt.substring(0, 800) });
   } catch (e) {
+    console.error('[destiny] error:', e.message);
     res.status(500).json({ error: 'Destiny error: ' + e.message });
   }
 }
