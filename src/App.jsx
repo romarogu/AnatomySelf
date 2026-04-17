@@ -942,21 +942,34 @@ function Dashboard({ user, setUser, onLogout }) {
   const isDiscovery = !!user.discoveryMode;
   // Ensure all 15 standard slots exist, merging any saved data
   const initMetrics = useMemo(() => {
-    // Try localStorage first (has RHR from BirthSetup)
     let saved = user.metrics || [];
-    try {
-      const stored = localStorage.getItem('as_metrics_' + (user.userId || 'anon'));
-      if (stored) { const parsed = JSON.parse(stored); if (Array.isArray(parsed) && parsed.length) saved = parsed; }
-    } catch {}
     return INIT_M.map(slot => {
       const existing = saved.find(m => m.key === slot.key);
-      const aliased = !existing && slot.key === "SBP" ? saved.find(m => m.key === "BP") :
-                      !existing && slot.key === "TG" ? saved.find(m => m.key === "TC") : null;
-      return existing ? { ...slot, value: existing.value } :
-             aliased ? { ...slot, value: aliased.value } : slot;
+      return existing ? { ...slot, value: existing.value } : slot;
     });
   }, []);
   const [metrics, setMetrics] = useState(initMetrics);
+
+  // Load metrics from Supabase on mount
+  useEffect(() => {
+    if (!user.userId) return;
+    (async () => {
+      try {
+        const cloudMetrics = await apiLoadMetrics(user.userId);
+        if (cloudMetrics && cloudMetrics.length > 0) {
+          setMetrics(prev => {
+            const merged = [...prev];
+            cloudMetrics.forEach(cm => {
+              const idx = merged.findIndex(m => m.key === cm.key);
+              if (idx >= 0 && cm.value != null) merged[idx] = { ...merged[idx], value: cm.value };
+              else if (idx < 0 && cm.value != null) merged.push({ key: cm.key, value: cm.value });
+            });
+            return merged;
+          });
+        }
+      } catch (e) { console.error('Load metrics error:', e); }
+    })();
+  }, [user.userId]);
   const [file, setFile] = useState(null);
   const [ocr, setOcr] = useState(null);
   const [ocrL, setOcrL] = useState(false);
