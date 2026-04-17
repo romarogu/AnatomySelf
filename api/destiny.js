@@ -22,22 +22,24 @@ const SYSTEM_EN = `You are the interpretive voice of a deterministic Chinese Met
 You are NOT an oracle or fortune teller. You are a technical translator converting a strict mathematical chart into accessible, Stoic-inspired life guidance.
 
 IRON RULES:
-1. NO CALCULATION: FORBIDDEN from recalculating Five Elements ratios, zodiac, or solar time. The chart data is EXACT. Trust it absolutely.
-2. ANALOGICAL MAPPING: Wood="Growth & Nervous regulation", Fire="Charisma & Cardiovascular drive", Earth="Stability & Digestive grounding", Metal="Structure & Respiratory discipline", Water="Adaptability & Endocrine depth".
-3. TONE: Academic yet profound. "Destiny" = "Biological & Circumstantial Inclination".
-4. DEPTH != LENGTH. Use precise terminology. Each field max 80 words.
-5. If the astronomical note mentions solar time correction, naturally weave it into your interpretation.
+1. NO CALCULATION: FORBIDDEN from recalculating. Trust the provided JSON absolutely.
+2. CURRENT DATE: The current year and month are provided in the user message. NEVER reference years before the current year in your analysis. All temporal predictions must be about the current year and future.
+3. TONE: Mystical yet actionable. Like a cold, precise oracle — not a chatty astrologer. Each insight should feel like a revelation, not a lecture.
+4. BREVITY: collision_items current_forces ≤30 words. prevention ≤20 words. temporal_outlook ≤60 words. Think haiku, not essay.
+5. ACTIONABLE: Every prevention must be a concrete daily action (food, exercise, sleep habit) — not vague advice like "pay attention to health".
+6. ANALOGICAL MAPPING: Wood="Nervous system/Liver", Fire="Cardiovascular/Spirit", Earth="Digestive/Stability", Metal="Respiratory/Boundaries", Water="Endocrine/Depth".
 
 Return pure JSON only.`;
 
-const SYSTEM_ZH = `你是"精密玄学"算法的解释层AI。你不是算命先生，而是将严密的数学排盘结果翻译为人性化洞察的学术翻译官。
+const SYSTEM_ZH = `你是"精密玄学"算法的解释层AI。你不是算命先生，而是冷峻的生命审计官。
 
 【铁律】
-1. 禁止计算：严禁重新计算五行百分比、十神或真太阳时。输入数据是精确的，你只负责解释。
-2. 生理映射：木-神经/肝，火-心血管，土-消化/稳定，金-呼吸/界限，水-内分泌。
-3. 哲学基调：斯多葛倾向。了解倾向为了优化选择，非屈服宿命。
-4. 深度不等于长度。每字段最多80字。
-5. 若天文备注提到真太阳时校正，在解释中自然引用。
+1. 禁止计算：严禁重新计算。信任输入数据。
+2. 当前日期：用户消息中提供了当前年月。严禁提到当前年份之前的年份。所有时间预测必须是当前年份及以后。
+3. 语调：神秘但可执行。像冷峻的神谕——不是啰嗦的算命先生。每句洞察应该像启示，不像讲座。
+4. 精简：collision_items的current_forces≤30字。prevention≤20字。temporal_outlook≤60字。惜字如金。
+5. 可执行：每条prevention必须是具体的日常行动（饮食/运动/作息）——不要"注意健康"这种空话。
+6. 生理映射：木-神经/肝，火-心血管/精神，土-消化/稳定，金-呼吸/界限，水-内分泌/深度。
 
 返回纯JSON。`;
 
@@ -59,45 +61,47 @@ export default async function handler(req, res) {
     const userMsg = isEn ? `DETERMINISTIC CHART DATA (server-computed, DO NOT recalculate):
 ${JSON.stringify(chartData, null, 2)}
 
-BaZi: ${baziStr} | Date: ${Y}/${M}
+BaZi: ${baziStr}
+⚠ CURRENT DATE: ${Y}/${M} — ALL predictions must reference ${Y} or later. NEVER mention ${Y-1} or earlier years.
 ${astroNote ? 'ASTRONOMICAL NOTE: ' + astroNote : ''}
 
-Interpret the EXACT data above.
-IMPORTANT: Generate collision_items for ALL 5 element systems (Wood 木, Fire 火, Earth 土, Metal 金, Water 水). The organ_wuxing field MUST be the Chinese character only: 木 or 火 or 土 or 金 or 水. Analyze how current luck pillar and annual pillar affect each organ system.
+Generate collision_items for ALL 5 elements. organ_wuxing MUST be Chinese character: 木/火/土/金/水.
+Keep current_forces ≤30 words, prevention ≤20 words (concrete daily action). temporal_outlook ≤60 words.
 
 Return JSON:
-{"bazi_analysis":{"pillars":"pillar breakdown","pattern":"pattern+gods","health_map":"organ strengths/weaknesses"},
+{"bazi_analysis":{"pillars":"≤40w","pattern":"≤40w","health_map":"≤40w"},
 "collision_items":[
-  {"organ_wuxing":"木","current_forces":"Wood/Liver analysis","risk_window":"","prevention":""},
-  {"organ_wuxing":"火","current_forces":"Fire/Heart analysis","risk_window":"","prevention":""},
-  {"organ_wuxing":"土","current_forces":"Earth/Spleen analysis","risk_window":"","prevention":""},
-  {"organ_wuxing":"金","current_forces":"Metal/Lung analysis","risk_window":"","prevention":""},
-  {"organ_wuxing":"水","current_forces":"Water/Kidney analysis","risk_window":"","prevention":""}
+  {"organ_wuxing":"木","current_forces":"≤30w","risk_window":"month range in ${Y}","prevention":"concrete action ≤20w"},
+  {"organ_wuxing":"火","current_forces":"≤30w","risk_window":"","prevention":"≤20w"},
+  {"organ_wuxing":"土","current_forces":"≤30w","risk_window":"","prevention":"≤20w"},
+  {"organ_wuxing":"金","current_forces":"≤30w","risk_window":"","prevention":"≤20w"},
+  {"organ_wuxing":"水","current_forces":"≤30w","risk_window":"","prevention":"≤20w"}
 ],
-"life_tuning":{"medical_advice":["","",""],"destiny_advice":["with colors/directions/foods","",""]},
-"temporal_outlook":"12-month from ${Y}/${M}",
-"key_dates":["Month Year: reason"]}` :
+"life_tuning":{"medical_advice":["concrete action","",""],"destiny_advice":["food/color/direction","",""]},
+"temporal_outlook":"≤60w outlook from ${Y}/${M}",
+"key_dates":["${Y}/Month: reason"]}` :
 
 `【确定性排盘数据 — 服务器计算，严禁重新推导】
 ${JSON.stringify(chartData, null, 2)}
 
-八字：${baziStr} | 日期：${Y}年${M}月
+八字：${baziStr}
+⚠ 当前日期：${Y}年${M}月 — 所有预测必须是${Y}年或以后。严禁提到${Y-1}年或更早的年份。
 ${astroNote ? '【天文备注】' + astroNote : ''}
 
-基于以上精确数据解释。重要：为五个五行系统都生成collision_items（木火土金水），分析当前大运流年对每个脏腑的影响。
+为五行全部生成collision_items（木火土金水）。current_forces≤30字，prevention≤20字（具体日常行动）。temporal_outlook≤60字。
 
 返回JSON：
-{"bazi_analysis":{"pillars":"四柱","pattern":"格局+用忌神","health_map":"脏腑强弱"},
+{"bazi_analysis":{"pillars":"≤40字","pattern":"≤40字","health_map":"≤40字"},
 "collision_items":[
-  {"organ_wuxing":"木","current_forces":"","risk_window":"","prevention":""},
-  {"organ_wuxing":"火","current_forces":"","risk_window":"","prevention":""},
-  {"organ_wuxing":"土","current_forces":"","risk_window":"","prevention":""},
-  {"organ_wuxing":"金","current_forces":"","risk_window":"","prevention":""},
-  {"organ_wuxing":"水","current_forces":"","risk_window":"","prevention":""}
+  {"organ_wuxing":"木","current_forces":"≤30字","risk_window":"${Y}年月份范围","prevention":"具体行动≤20字"},
+  {"organ_wuxing":"火","current_forces":"≤30字","risk_window":"","prevention":"≤20字"},
+  {"organ_wuxing":"土","current_forces":"≤30字","risk_window":"","prevention":"≤20字"},
+  {"organ_wuxing":"金","current_forces":"≤30字","risk_window":"","prevention":"≤20字"},
+  {"organ_wuxing":"水","current_forces":"≤30字","risk_window":"","prevention":"≤20字"}
 ],
-"life_tuning":{"medical_advice":["","",""],"destiny_advice":["含颜色方位食物","",""]},
-"temporal_outlook":"${Y}年${M}月起12月展望",
-"key_dates":["年月：原因"]}`;
+"life_tuning":{"medical_advice":["具体行动","",""],"destiny_advice":["食物/颜色/方位","",""]},
+"temporal_outlook":"从${Y}年${M}月起≤60字展望",
+"key_dates":["${Y}年X月：原因"]}`;
 
     const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',

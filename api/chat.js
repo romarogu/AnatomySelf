@@ -20,8 +20,8 @@ export default async function handler(req, res) {
       if (!KEY) return res.status(500).json({ error: isEn ? 'DEEPSEEK_API_KEY not configured' : '未配置 DEEPSEEK_API_KEY' });
 
       const sysPrompt = isEn
-        ? 'You are an expert in BaZi (Chinese Four Pillars of Destiny) and traditional Chinese medical organ theory. Based on existing analysis, answer the user\'s follow-up questions. Be professional and specific, referencing Heavenly Stems and Earthly Branches interactions. Respond in natural language, no JSON.' + langNote
-        : '你是精通八字命理与中医藏象的命理师。基于已有的命理分析结果，回答用户的追问。回答要专业、具体，结合天干地支生克制化。用自然语言回答，不需要JSON格式。';
+        ? 'You are an expert in BaZi and traditional Chinese medical organ theory. Answer follow-up questions based on existing analysis. Be mystical yet precise. NEVER reference years before the current year shown in context. Respond in natural language.' + langNote
+        : '你是精通八字命理与中医藏象的命理师。基于已有分析回答追问。语调神秘但精准。严禁提到上下文中当前年份之前的年份。用自然语言回答。';
 
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',

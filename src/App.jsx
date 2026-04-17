@@ -1234,14 +1234,27 @@ function Dashboard({ user, setUser, onLogout }) {
     setChatHistory(prev => [...prev, { role: "user", text: q, brain: chatBrain }]);
     setChatLoading(true);
     try {
-      // Build context for the AI
-      let ctx = `User: ${age}y/o ${sex === "M" ? "male" : "female"}, Day Master ${bazi.dm}(${bazi.dme}), Major Cycle ${dy.lbl}, Annual Cycle ${ln.lbl}\n`;
-      if (sci?.summary) ctx += `Science Brain Summary: ${sci.summary}\n`;
-      if (dst?.temporal_outlook) ctx += `Meta Brain Summary: ${dst.temporal_outlook}\n`;
-      if (sci?.items?.length) ctx += `Anomalies: ${sci.items.map(i => i.metric || i.metric_cn).join(", ")}\n`;
-      // Add last few chat messages for continuity
-      const recent = chatHistory.slice(-4).map(m => `${m.role === "user" ? "User" : (m.brain === "science" ? "Science Brain" : "Meta Brain")}: ${m.text}`).join("\n");
-      if (recent) ctx += `\nChat History:\n${recent}`;
+      const Y = new Date().getFullYear();
+      const M = new Date().getMonth() + 1;
+      // Build rich context with user's actual data
+      let ctx = `Current date: ${Y}/${M}\n`;
+      ctx += `User: ${age}y/o ${sex === "M" ? "male" : "female"}\n`;
+      ctx += `BaZi: ${baziStr}, Day Master ${bazi.dm}(${bazi.dme})\n`;
+      ctx += `Major Cycle: ${dy.lbl}(${dy.el}), Annual: ${ln.lbl}(${ln.el})\n`;
+      // Include actual metrics
+      const filled = metrics.filter(m => m.value != null);
+      if (filled.length > 0) {
+        ctx += `Biomarkers: ${filled.map(m => `${m.key}=${m.value}`).join(', ')}\n`;
+      }
+      if (anoms.length > 0) {
+        ctx += `⚠ Abnormal: ${anoms.map(a => `${a.key}=${a.value} (${a.st})`).join(', ')}\n`;
+      }
+      if (sci?.sentinel) ctx += `Science sentinel: ${sci.sentinel}\n`;
+      if (sci?.items?.length) ctx += `Clinical findings: ${sci.items.map(i => `${i.metric||i.metric_cn}(${i.organ_system}): ${i.clinical_fact||''}`).join('; ')}\n`;
+      if (dst?.temporal_outlook) ctx += `Meta outlook: ${dst.temporal_outlook}\n`;
+      // Recent chat for continuity
+      const recent = chatHistory.slice(-4).map(m => `${m.role === "user" ? "User" : (m.brain === "science" ? "Science" : "Meta")}: ${m.text}`).join("\n");
+      if (recent) ctx += `\nRecent chat:\n${recent}`;
 
       const res = await apiChat({ brain: chatBrain, question: q, context: ctx, lang: locale });
       setChatHistory(prev => [...prev, { role: "assistant", text: res.answer || (locale==='en'?"No response":"无回答"), brain: chatBrain }]);
@@ -1249,7 +1262,7 @@ function Dashboard({ user, setUser, onLogout }) {
       setChatHistory(prev => [...prev, { role: "assistant", text: (locale==='en'?"Chat error: ":"对话失败: ") + err.message, brain: chatBrain }]);
     }
     setChatLoading(false);
-  }, [chatInput, chatBrain, chatLoading, chatHistory, age, sex, bazi, dy, ln, sci, dst, locale]);
+  }, [chatInput, chatBrain, chatLoading, chatHistory, age, sex, bazi, baziStr, dy, ln, sci, dst, metrics, anoms, locale]);
 
   // ── Helper: open report in new window with print prompt ──
   const openReport = useCallback((title, htmlContent) => {
