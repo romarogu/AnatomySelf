@@ -2145,20 +2145,22 @@ ${days.map(d=>`<div class="day">
                             </div>
                           </div>
 
-                          {/* Expand/Collapse toggle — always show */}
+                          {/* Expand/Collapse toggle */}
                           {(sciItem || dstItem) && (
                             <div
-                              onClick={(e) => { e.stopPropagation(); setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] })); }}
+                              onClick={(e) => { e.stopPropagation(); e.preventDefault(); setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] })); }}
+                              role="button" tabIndex={0}
+                              onKeyDown={(e) => { if (e.key==='Enter') setExpandedCards(prev => ({ ...prev, [g.el]: !prev[g.el] })); }}
                               style={{
-                                padding:"8px 16px", cursor:"pointer", userSelect:"none",
-                                borderTop:"1px solid rgba(196,162,101,.08)",
+                                padding:"10px 16px", cursor:"pointer", userSelect:"none", WebkitTapHighlightColor:"transparent",
+                                borderTop:"1px solid rgba(196,162,101,.12)",
                                 display:"flex", alignItems:"center", gap:6,
-                                background: expandedCards[g.el] ? "rgba(196,162,101,.03)" : "transparent",
-                                transition:"background .2s",
+                                background: expandedCards[g.el] ? "rgba(196,162,101,.06)" : "rgba(196,162,101,.02)",
+                                transition:"background .15s",
                               }}
                             >
-                              <span style={{ ...S.mono, fontSize:".65rem", color: expandedCards[g.el] ? "#c4a265" : "#5e5a52", letterSpacing:".1em" }}>
-                                {expandedCards[g.el] ? '▾' : '▸'} {locale==='en' ? (expandedCards[g.el] ? 'COLLAPSE' : 'FULL ANALYSIS') : (expandedCards[g.el] ? '收起' : '展开详情')}
+                              <span style={{ fontSize:".75rem", color: expandedCards[g.el] ? "#c4a265" : "#9a9488", letterSpacing:".05em", fontWeight:500 }}>
+                                {expandedCards[g.el] ? '▾' : '▸'} {locale==='en' ? (expandedCards[g.el] ? 'Collapse' : 'Show Details') : (expandedCards[g.el] ? '收起' : '展开详情')}
                               </span>
                             </div>
                           )}
