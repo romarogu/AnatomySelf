@@ -14,8 +14,13 @@ export default async function handler(req, res) {
     const { age, sex, anomalies, allMetrics, lang } = req.body;
     const isEn = lang === 'en';
 
-    const KEY = process.env.ZHIPU_API_KEY;
-    if (!KEY) return res.status(500).json({ error: isEn ? 'ZHIPU_API_KEY not configured' : '未配置 ZHIPU_API_KEY' });
+    // Try Zhipu first, fall back to Claude proxy
+    const ZHIPU_KEY = process.env.ZHIPU_API_KEY;
+    const CLAUDE_KEY = process.env.CLAUDE_API_KEY;
+    
+    const useZhipu = !!ZHIPU_KEY;
+    const KEY = ZHIPU_KEY || CLAUDE_KEY;
+    if (!KEY) return res.status(500).json({ error: 'No AI API key configured' });
 
     const sexLabel = isEn ? (sex === 'M' ? 'male' : 'female') : (sex === 'M' ? '男' : '女');
     const groupLabel = isEn
@@ -38,36 +43,45 @@ export default async function handler(req, res) {
         ? `${age}y/o ${sexLabel} (${groupLabel}), all normal:\n${desc}\n\nReturn JSON:\n{"sentinel":"ONE sentence health status","items":[{"metric":"code","metric_cn":"name","organ_system":"木/火/土/金/水","severity":"info","clinical_fact":"boundary assessment ≤30w","recommendation":"preventive action ≤20w"}],"summary":"overall ≤60w"}`
         : `${age}岁${sexLabel}(${groupLabel})，全部正常:\n${desc}\n\n返回JSON:\n{"sentinel":"一句话健康状态","items":[{"metric":"代码","metric_cn":"中文名","organ_system":"木/火/土/金/水","severity":"info","clinical_fact":"边界评估≤30字","recommendation":"预防建议≤20字"}],"summary":"整体评估≤60字"}`;
     } else {
-      return res.json({ items: [], summary: isEn ? 'No biomarkers entered. Please enter data in Data Center first.' : '暂无录入指标，请先在数据中心录入体检数据。' });
+      return res.json({ items: [], summary: isEn ? 'No biomarkers entered.' : '暂无录入指标，请先在数据中心录入体检数据。' });
     }
 
-    const resp = await fetch('https://api.z.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'glm-4-plus',
-        max_tokens: 2000,
-        temperature: 0.3,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
-        ],
-      }),
-    });
+    let resp;
+    if (useZhipu) {
+      // Zhipu API (OpenAI compatible)
+      resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}` },
+        body: JSON.stringify({
+          model: 'glm-4-plus', max_tokens: 2000, temperature: 0.3,
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
+        }),
+      });
+    } else {
+      // Claude proxy (Anthropic format)
+      resp = await fetch('https://api.gptsapi.net/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KEY}`, 'x-api-key': KEY },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6', max_tokens: 2000, system: systemPrompt,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+    }
 
     if (!resp.ok) {
       const err = await resp.text();
-      return res.status(500).json({ error: `Zhipu API error (${resp.status}): ${err.substring(0, 200)}` });
+      return res.status(500).json({ error: `Science API error (${resp.status}): ${err.substring(0, 200)}` });
     }
 
     const data = await resp.json();
-    const txt = data.choices?.[0]?.message?.content || '';
+    // Parse response based on API format
+    const txt = useZhipu
+      ? (data.choices?.[0]?.message?.content || '')
+      : (data.content || []).map(c => c.text || '').join('');
     const parsed = parseJson(txt);
     res.json(parsed || { items: [], summary: txt.substring(0, 500) });
   } catch (e) {
-    res.status(500).json({ error: 'Science analysis error: ' + e.message });
+    res.status(500).json({ error: 'Science error: ' + e.message });
   }
 }
