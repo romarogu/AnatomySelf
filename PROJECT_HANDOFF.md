@@ -302,19 +302,32 @@ cd AnatomySelf
 # 安装
 npm install
 
-# 环境变量（创建 .env）
+# 环境变量（推荐创建 .env.local，并参考 .env.example）
 VITE_SUPABASE_URL=https://bbubmwldwmtyyvgczela.supabase.co
 VITE_SUPABASE_KEY=sb_publishable_...
 ZHIPU_API_KEY=...
 DEEPSEEK_API_KEY=...
+CLAUDE_API_KEY=... # 可选 fallback
 
-# 启动（需要同时启动 Vite dev server 和本地 API server）
-npm run dev          # 前端 :3000
-node server/index.js # 后端 :4000（本地代理 /api/*）
+# 启动（推荐主线路径：Vercel Functions + Vite）
+# 终端 1：本地 serverless API（:4000）
+npx vercel dev --listen 4000
+# 终端 2：前端（:3000，/api 代理到 :4000）
+npm run dev
 
 # 构建
 npm run build
 ```
+
+### 11.1 备用：本地 Express 模式（非默认）
+
+如需调试 `server/index.js` 历史实现，可单独运行：
+
+```bash
+node server/index.js
+```
+
+注意：该模式依赖 `express/cors/multer/better-sqlite3` 等包，当前仓库默认开发路径仍以 `api/*.js` 的 Vercel Serverless 为准。
 
 ### Vercel 部署
 推送到 `main` 分支自动部署。Vercel 会：

@@ -1,34 +1,25 @@
 # 🔬 AnatomySelf · 个人生命实验室
 
-**Medical Anatomy × Physiology × BaZi WuXing Collision System**
+Medical Anatomy × Physiology × BaZi WuXing Collision System
 
-## 架构
+## 当前主线架构（推荐理解）
 
-```
-┌─────────────────────────────────────────────────┐
-│              Vite + React Frontend              │
-│  Login → Birth Setup → Dashboard (4 tabs)       │
-│  ┌──────────┬──────────┬────────┬─────────────┐ │
-│  │ 数据中心  │ 对撞雷达 │双脑洞察│ 体检指标    │ │
-│  └──────────┴──────────┴────────┴─────────────┘ │
-│           ↓ /api/* (Vite proxy)                 │
-├─────────────────────────────────────────────────┤
-│            Express Backend (port 4000)           │
-│  ┌─────────┐  ┌──────────┐  ┌────────────────┐ │
-│  │ /api/ocr│  │/api/     │  │ /api/destiny   │ │
-│  │ Claude  │  │science   │  │ DeepSeek API   │ │
-│  │ Vision  │  │Claude API│  │ (fallback:     │ │
-│  │         │  │          │  │  Claude)       │ │
-│  └─────────┘  └──────────┘  └────────────────┘ │
-│  ┌──────────────────────────────────────────┐   │
-│  │ /api/auth/*  /api/user/*  (SQLite)       │   │
-│  └──────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────┘
+本仓库当前以 **Vite + React 前端** + **Vercel Serverless API (`/api/*.js`)** + **Supabase** 为主线。
+
+```text
+src/* (React SPA)
+  └─ fetch('/api/*')
+       └─ api/*.js (Vercel Functions)
+            └─ AI providers + Supabase
 ```
 
-## 快速开始
+`server/index.js` 是保留的本地 Express 方案（历史/备用），不是当前默认部署路径。
 
-### 1. 安装依赖
+---
+
+## 快速开始（推荐本地联调方式）
+
+### 1) 安装依赖
 
 ```bash
 git clone https://github.com/romarogu/AnatomySelf.git
@@ -36,103 +27,82 @@ cd AnatomySelf
 npm install
 ```
 
-### 2. 配置 API Keys
+### 2) 配置环境变量
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-编辑 `.env`：
-```
-ANTHROPIC_API_KEY=sk-ant-xxx    # 必需：Claude API（OCR + 科学大脑）
-DEEPSEEK_API_KEY=sk-xxx         # 可选：DeepSeek（命理大脑，不填则用Claude）
-PORT=4000
-```
+按 `.env.example` 填写至少以下项：
 
-### 3. 启动开发环境
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_KEY`
+- `ZHIPU_API_KEY`（推荐）
+- 以及可选的 `DEEPSEEK_API_KEY` / `CLAUDE_API_KEY`（fallback）
+
+### 3) 启动本地开发（两终端）
 
 ```bash
-# 终端 1：启动后端 API
-npm run server
+# 终端 1：启动本地 Serverless API（监听 4000，匹配 vite proxy）
+npx vercel dev --listen 4000
 
-# 终端 2：启动前端开发服务器
+# 终端 2：启动前端
 npm run dev
 ```
 
-打开 `http://localhost:3000`
+访问：`http://localhost:3000`
 
-### 4. 生产部署
+> 说明：`vite.config.js` 已将 `/api` 代理到 `http://localhost:4000`。
 
-```bash
-# 构建前端
-npm run build
-
-# 启动生产服务器（同时服务前端静态文件和API）
-npm run server
-```
-
-打开 `http://localhost:4000`
-
-## 部署到云服务器
-
-### 方案 A：Railway（最简单）
-
-1. 访问 [railway.app](https://railway.app)
-2. New Project → Deploy from GitHub repo
-3. 添加环境变量 `ANTHROPIC_API_KEY` 和 `DEEPSEEK_API_KEY`
-4. Start Command 设为 `npm run build && npm run server`
-5. 自动获得公网 URL
-
-### 方案 B：VPS 手动部署
+### 4) 构建与预览
 
 ```bash
-# 在服务器上
-git clone https://github.com/romarogu/AnatomySelf.git
-cd AnatomySelf
-npm install
-cp .env.example .env  # 填入API keys
 npm run build
-PORT=80 npm run server
+npm run preview
 ```
 
-### 方案 C：Docker
+---
 
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-EXPOSE 4000
-CMD ["npm", "run", "server"]
-```
+## 部署（生产）
+
+生产以 Vercel 为准：
+
+- `vercel.json` 使用 `npx vite build`
+- `dist/` 作为静态输出
+- `api/*.js` 作为 Serverless Functions
+
+---
 
 ## 项目结构
 
-```
+```text
 AnatomySelf/
-├── index.html              # Vite 入口
-├── vite.config.js          # Vite 配置（含 /api 代理）
-├── package.json
-├── .env.example            # 环境变量模板
-├── .gitignore
-├── public/
-│   └── favicon.svg
-├── src/
-│   ├── main.jsx            # React 入口
-│   ├── App.jsx             # 主应用（BaZi引擎 + UI）
-│   └── api.js              # 后端 API 客户端
-└── server/
-    └── index.js            # Express 后端（OCR/Science/Destiny/Auth）
+├── api/                    # Vercel Serverless Functions（主线 API）
+├── src/                    # React 前端
+├── public/                 # 静态资源（PWA manifest/sw 等）
+├── supabase-schema.sql     # Supabase 表结构 + RLS
+├── vercel.json             # Vercel 构建与函数配置
+├── vite.config.js          # Vite dev 配置（含 /api 代理）
+└── server/index.js         # Express 本地备用实现（非默认）
 ```
 
-## 双脑管线
+---
 
-| 大脑 | API | 功能 |
-|------|-----|------|
-| 科学大脑 | Claude API | 解剖学/生理学解读，人口统计学差异 |
-| 命理大脑 | DeepSeek API | 天干生克、地支刑冲破害合会、格局、调候、通关、十二长生、旺相休囚死、神煞 |
+## 常用脚本
+
+`package.json` 当前可用脚本：
+
+- `npm run dev`：前端开发服务器
+- `npm run build`：打包
+- `npm run preview`：预览打包结果
+
+---
+
+## 备用说明：Express 本地模式（非推荐）
+
+如需使用 `server/index.js`，请注意它依赖 `express/cors/multer/better-sqlite3` 等包，当前未作为默认开发路径维护。建议优先使用上方 Vercel Serverless 本地联调方式。
+
+---
 
 ## License
 
