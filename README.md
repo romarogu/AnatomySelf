@@ -17,7 +17,17 @@ src/* (React SPA)
 
 ---
 
-## 快速开始（推荐本地联调方式）
+## 本地开发（单一事实来源）
+
+请直接参考：
+
+- `docs/LOCAL_DEVELOPMENT.md`
+
+该文档是本仓库唯一权威的本地开发指南；若其他文档有冲突，以该文档为准。
+
+---
+
+## 快速开始（摘要）
 
 ### 1) 安装依赖
 
@@ -33,12 +43,7 @@ npm install
 cp .env.example .env.local
 ```
 
-按 `.env.example` 填写至少以下项：
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_KEY`
-- `ZHIPU_API_KEY`（推荐）
-- 以及可选的 `DEEPSEEK_API_KEY` / `CLAUDE_API_KEY`（fallback）
+环境变量说明详见 `docs/LOCAL_DEVELOPMENT.md`。
 
 ### 3) 启动本地开发（两终端）
 
@@ -100,7 +105,7 @@ AnatomySelf/
 
 ## 备用说明：Express 本地模式（非推荐）
 
-如需使用 `server/index.js`，请注意它依赖 `express/cors/multer/better-sqlite3` 等包，当前未作为默认开发路径维护。建议优先使用上方 Vercel Serverless 本地联调方式。
+如需使用 `server/index.js`，请先阅读 `docs/LOCAL_DEVELOPMENT.md` 中的 “Legacy fallback” 章节。建议优先使用 Vercel Serverless 本地联调方式。
 
 ---
 

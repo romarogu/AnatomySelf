@@ -294,6 +294,12 @@ Cr, UA, VitD (肾脏/水)
 
 ## 十一、本地开发
 
+本章节仅保留摘要，完整步骤请以以下文档为准（单一事实来源）：
+
+- `docs/LOCAL_DEVELOPMENT.md`
+
+若本文件与其他文档存在冲突，以该文档为准。
+
 ```bash
 # 克隆
 git clone https://github.com/romarogu/AnatomySelf.git
